@@ -1,0 +1,36 @@
+{
+  "name": "tiny-ja-date",
+  "version": "0.1.0",
+  "description": "Tiny TypeScript date utilities for Japanese UI.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "keywords": [
+    "japanese",
+    "date",
+    "datetime",
+    "format",
+    "relative-date",
+    "business-day",
+    "typescript"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
