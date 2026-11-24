@@ -1,10 +1,79 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   formatJaDate,
   formatRelativeJaDate,
   isWeekendJP,
   nextBusinessDay,
 } from "../src"
+
+describe("timeZone", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+  const losAngeles = { timeZone: "America/Los_Angeles" }
+
+  it("projects an instant into the requested calendar date and weekday", () => {
+    const instant = new Date("2026-11-20T15:30:00Z")
+    expect(formatJaDate(instant, tokyo)).toBe("2026年11月21日（土）")
+    expect(formatJaDate(instant.getTime(), losAngeles)).toBe("2026年11月20日（金）")
+    expect(isWeekendJP(instant, tokyo)).toBe(true)
+    expect(isWeekendJP(instant, losAngeles)).toBe(false)
+  })
+
+  it("keeps date-only inputs on the stated calendar date", () => {
+    expect(formatJaDate("2026-11-24", tokyo)).toBe("2026年11月24日（火）")
+    expect(formatJaDate("2026-11-24", losAngeles)).toBe("2026年11月24日（火）")
+    expect(formatJaDate("0000-01-01", tokyo)).toBe("0年1月1日（土）")
+    expect(() => formatJaDate("2026-02-30", tokyo)).toThrow(TypeError)
+  })
+
+  it("uses the requested time zone for both dates and the default base", () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date("2026-11-23T15:30:00Z"))
+      expect(formatRelativeJaDate("2026-11-24", undefined, tokyo)).toBe("今日")
+      expect(formatRelativeJaDate("2026-11-24", undefined, losAngeles)).toBe("明日")
+      expect(formatRelativeJaDate("2026-11-24", "2026-11-23T15:30:00Z", tokyo)).toBe("今日")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("counts calendar days across a daylight saving change", () => {
+    expect(formatRelativeJaDate("2026-03-09T07:00:00Z", "2026-03-07T08:00:00Z", losAngeles))
+      .toBe("2日後")
+    expect(nextBusinessDay("2026-03-06", losAngeles).toISOString()).toBe("2026-03-09T07:00:00.000Z")
+  })
+
+  it("compares holidays in the requested zone and returns its day start", () => {
+    expect(nextBusinessDay("2026-11-20", {
+      ...tokyo,
+      holidays: ["2026-11-22T15:00:00Z"],
+    }).toISOString()).toBe("2026-11-23T15:00:00.000Z")
+    expect(nextBusinessDay("2026-11-20", {
+      ...losAngeles,
+      holidays: ["2026-11-22T15:00:00Z"],
+    }).toISOString()).toBe("2026-11-23T08:00:00.000Z")
+  })
+
+  it("returns the first valid time when a weekday starts after midnight", () => {
+    expect(nextBusinessDay("1985-12-31", { timeZone: "Asia/Kathmandu" }).toISOString())
+      .toBe("1985-12-31T18:30:00.000Z")
+  })
+
+  it("skips a weekday that does not exist in the selected zone", () => {
+    expect(nextBusinessDay("2011-12-29", { timeZone: "Pacific/Apia" }).toISOString())
+      .toBe("2012-01-01T10:00:00.000Z")
+  })
+
+  it("rejects unknown zones and invalid or ambiguous input strings", () => {
+    expect(() => formatJaDate("2026-11-24", { timeZone: "Invalid/Zone" })).toThrow(RangeError)
+    expect(() => formatJaDate("2026-11-24T00:30:00", tokyo)).toThrow(TypeError)
+    expect(() => formatJaDate("2026-02-30T00:00:00Z", tokyo)).toThrow(TypeError)
+    expect(() => nextBusinessDay("2026-11-20", {
+      ...tokyo,
+      holidays: ["2026-11-23T00:00:00"],
+    })).toThrow(TypeError)
+  })
+})
 
 describe("formatJaDate", () => {
   it("formats a date in Japanese style", () => {

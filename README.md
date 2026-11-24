@@ -38,7 +38,7 @@ nextBusinessDay(new Date(2026, 4, 15))
 
 ## API
 
-### `formatJaDate(date: Date | string | number): string`
+### `formatJaDate(date: DateInput, options?: DateOptions): string`
 
 Formats a date as a Japanese date label.
 
@@ -47,7 +47,7 @@ formatJaDate(new Date(2026, 4, 12))
 // "2026年5月12日（火）"
 ```
 
-### `formatRelativeJaDate(date: Date | string | number, baseDate?: Date | string | number): string`
+### `formatRelativeJaDate(date: DateInput, baseDate?: DateInput, options?: DateOptions): string`
 
 Formats a date relative to a base date.
 
@@ -68,7 +68,7 @@ formatRelativeJaDate(new Date(2026, 4, 15), new Date(2026, 4, 12))
 // "3日後"
 ```
 
-### `isWeekendJP(date: Date | string | number): boolean`
+### `isWeekendJP(date: DateInput, options?: DateOptions): boolean`
 
 Checks whether the date is Saturday or Sunday.
 
@@ -79,7 +79,9 @@ isWeekendJP(new Date(2026, 4, 16))
 
 ### `nextBusinessDay(date: DateInput, options?: BusinessDayOptions): Date`
 
-Returns the start of the next business day in the runtime's local time zone.
+Returns a `Date` for the start of the next business day in the selected time
+zone. If midnight is skipped, the result is the first valid time on that date.
+If a time zone skipped an entire date, the search continues to the following date.
 
 The search starts the day after the input and skips Saturdays, Sundays, and
 any local calendar dates supplied in `options.holidays`. Each holiday accepts
@@ -93,15 +95,37 @@ nextBusinessDay("2026-05-15", { holidays: ["2026-05-18"] })
 // Date for 2026-05-19
 ```
 
+## Time zones
+
+All four functions accept an optional `timeZone` such as `"Asia/Tokyo"`.
+When omitted, they keep the runtime-local behavior of 0.2. The runtime's
+`Intl.DateTimeFormat` supplies the time zone rules. Unrecognized IANA names
+throw a `RangeError`.
+
+```ts
+const tokyo = { timeZone: "Asia/Tokyo" }
+
+formatJaDate("2026-11-23T15:30:00Z", tokyo)
+// "2026年11月24日（火）"
+
+formatRelativeJaDate("2026-11-24", undefined, tokyo)
+// Relative to today's date in Tokyo
+
+nextBusinessDay("2026-11-20", { ...tokyo, holidays: ["2026-11-23"] }).toISOString()
+// "2026-11-23T15:00:00.000Z" (2026-11-24 at 00:00 in Tokyo)
+```
+
 ## Date inputs
 
-- `YYYY-MM-DD` strings represent local calendar dates in the runtime's time zone.
+- `YYYY-MM-DD` strings represent calendar dates as written in the selected time
+  zone. The runtime-local zone is used when no zone is specified.
   Invalid dates such as `2026-02-30` throw a `TypeError`.
 - `Date` objects and Unix timestamps in milliseconds represent instants. The
-  functions use the instant's date in the runtime's local time zone.
+  functions use the instant's date in the selected time zone.
 - For strings with a time, use ISO 8601 with an explicit offset such as
-  `2026-05-12T09:00:00+09:00` to identify an instant. Strings without an
-  explicit offset and other string formats follow JavaScript's `Date` parsing.
+  `2026-05-12T09:00:00+09:00` to identify an instant. With an explicit
+  `timeZone`, date-time strings without an offset and other string formats
+  throw a `TypeError`. Without `timeZone`, they follow JavaScript's `Date` parsing.
 
 ### Upgrading from 0.1
 
@@ -116,7 +140,6 @@ as `2026-05-12T00:00:00Z` to retain the 0.1 interpretation.
 It does not:
 
 - include Japanese holiday data
-- convert time zones
 - format wareki
 - generate calendars
 - replace date-fns or dayjs

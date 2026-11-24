@@ -1,7 +1,11 @@
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
 const ONE_DAY_MS = 86400000;
+const MAX_DATE_MS = 8640000000000000;
+const GREGORIAN_CYCLE_MS = 146097 * ONE_DAY_MS;
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const OFFSET_DATE_TIME = /^((?:\d{4}|[+-]\d{6}))-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
 function toValidDate(input) {
-    if (typeof input === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    if (typeof input === "string" && DATE_ONLY.test(input)) {
         const [year, month, day] = input.split("-").map(Number);
         const date = new Date(0);
         date.setHours(0, 0, 0, 0);
@@ -19,23 +23,132 @@ function toValidDate(input) {
     }
     return date;
 }
-function localDayNumber(date) {
-    const utcDay = new Date(0);
-    utcDay.setUTCFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-    return utcDay.getTime() / ONE_DAY_MS;
+function utcDay(year, month, day) {
+    const date = new Date(0);
+    // A zone can project an instant near the Date limit into an adjacent day.
+    const cycles = Math.floor((year - 2000) / 400);
+    return date.setUTCFullYear(year - cycles * 400, month - 1, day) + cycles * GREGORIAN_CYCLE_MS;
 }
-export function formatJaDate(input) {
-    const date = toValidDate(input);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const weekday = WEEKDAYS_JA[date.getDay()];
+function checkedUtcDay(year, month, day) {
+    const value = utcDay(year, month, day);
+    const date = utcDateParts(value);
+    if (date.year !== year || date.month !== month || date.day !== day) {
+        throw new TypeError("Invalid date");
+    }
+    return value;
+}
+function utcDateParts(day) {
+    const cycles = Math.floor(day / GREGORIAN_CYCLE_MS);
+    const date = new Date(day - cycles * GREGORIAN_CYCLE_MS);
+    return {
+        year: date.getUTCFullYear() + cycles * 400,
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+    };
+}
+function createFormatter(timeZone) {
+    if (timeZone === undefined)
+        return undefined;
+    if (/^[+-]/.test(timeZone))
+        throw new RangeError("Expected an IANA time zone name");
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        calendar: "gregory",
+        numberingSystem: "latn",
+        era: "short",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
+        hourCycle: "h23",
+    });
+}
+// Express the zoned wall clock on the UTC timeline for offset and day arithmetic.
+function wallTime(instant, formatter) {
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(instant))
+        .map(({ type, value }) => [type, value]));
+    const year = Number(parts.year);
+    const day = utcDay(parts.era === "BC" ? 1 - year : year, Number(parts.month), Number(parts.day));
+    return day + (Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second)) * 1000;
+}
+function calendarDay(input, formatter) {
+    if (!formatter) {
+        const date = toValidDate(input);
+        return utcDay(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    }
+    if (typeof input === "string") {
+        if (DATE_ONLY.test(input)) {
+            const [year, month, day] = input.split("-").map(Number);
+            return checkedUtcDay(year, month, day);
+        }
+        const match = OFFSET_DATE_TIME.exec(input);
+        if (!match)
+            throw new TypeError("Expected YYYY-MM-DD or an ISO date-time with an offset");
+        checkedUtcDay(Number(match[1]), Number(match[2]), Number(match[3]));
+    }
+    const time = wallTime(toValidDate(input).getTime(), formatter);
+    return Math.floor(time / ONE_DAY_MS) * ONE_DAY_MS;
+}
+function zonedDayStart(day, formatter) {
+    const first = Math.max(-MAX_DATE_MS, day - ONE_DAY_MS * 2);
+    const last = Math.min(MAX_DATE_MS, day + ONE_DAY_MS * 2);
+    const offsets = new Set();
+    let earliest = Infinity;
+    let previous = first;
+    let previousWall = wallTime(first, formatter);
+    if (previousWall >= day && previousWall < day + ONE_DAY_MS)
+        earliest = first;
+    // Inspect offsets on both sides of midnight to handle repeated wall times.
+    for (let instant = first;; instant = Math.min(instant + ONE_DAY_MS / 4, last)) {
+        const wall = wallTime(instant, formatter);
+        offsets.add(wall - instant);
+        // A forward jump can begin the date after midnight or skip the whole date.
+        if (previousWall < day && wall >= day) {
+            let before = previous;
+            let after = instant;
+            while (after - before > 1000) {
+                const middle = Math.floor((before + after) / 2000) * 1000;
+                if (wallTime(middle, formatter) < day)
+                    before = middle;
+                else
+                    after = middle;
+            }
+            if (wallTime(after, formatter) < day + ONE_DAY_MS)
+                earliest = Math.min(earliest, after);
+        }
+        if (instant === last)
+            break;
+        previous = instant;
+        previousWall = wall;
+    }
+    for (const offset of offsets) {
+        const instant = day - offset;
+        if (Math.abs(instant) <= MAX_DATE_MS && wallTime(instant, formatter) === day) {
+            earliest = Math.min(earliest, instant);
+        }
+    }
+    return Number.isFinite(earliest) ? new Date(earliest) : undefined;
+}
+function weekdayOf(day) {
+    const weekday = (day / ONE_DAY_MS + 4) % 7;
+    return (weekday + 7) % 7;
+}
+function isWeekend(day) {
+    const weekday = weekdayOf(day);
+    return weekday === 0 || weekday === 6;
+}
+export function formatJaDate(input, options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    const date = calendarDay(input, formatter);
+    const { year, month, day } = utcDateParts(date);
+    const weekday = WEEKDAYS_JA[weekdayOf(date)];
     return `${year}年${month}月${day}日（${weekday}）`;
 }
-export function formatRelativeJaDate(input, baseInput = new Date()) {
-    const date = toValidDate(input);
-    const baseDate = toValidDate(baseInput);
-    const diffDays = localDayNumber(date) - localDayNumber(baseDate);
+export function formatRelativeJaDate(input, baseInput = new Date(), options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    const diffDays = (calendarDay(input, formatter) - calendarDay(baseInput, formatter)) / ONE_DAY_MS;
     if (diffDays === 0)
         return "今日";
     if (diffDays === -1)
@@ -46,18 +159,29 @@ export function formatRelativeJaDate(input, baseInput = new Date()) {
         return `${Math.abs(diffDays)}日前`;
     return `${diffDays}日後`;
 }
-export function isWeekendJP(input) {
-    const date = toValidDate(input);
-    const day = date.getDay();
-    return day === 0 || day === 6;
+export function isWeekendJP(input, options = {}) {
+    return isWeekend(calendarDay(input, createFormatter(options.timeZone)));
 }
 export function nextBusinessDay(input, options = {}) {
-    const date = toValidDate(input);
-    const holidays = new Set(options.holidays?.map((holiday) => localDayNumber(toValidDate(holiday))));
-    date.setHours(0, 0, 0, 0);
-    do {
-        date.setDate(date.getDate() + 1);
-        date.setHours(0, 0, 0, 0);
-    } while (isWeekendJP(date) || holidays.has(localDayNumber(date)));
-    return date;
+    const formatter = createFormatter(options.timeZone);
+    const day = calendarDay(input, formatter);
+    const holidays = new Set(options.holidays?.map((holiday) => calendarDay(holiday, formatter)));
+    for (let candidate = day + ONE_DAY_MS; candidate <= MAX_DATE_MS + ONE_DAY_MS; candidate += ONE_DAY_MS) {
+        if (isWeekend(candidate) || holidays.has(candidate))
+            continue;
+        if (formatter) {
+            const start = zonedDayStart(candidate, formatter);
+            if (start)
+                return start;
+        }
+        else {
+            const { year, month, day } = utcDateParts(candidate);
+            const local = new Date(0);
+            local.setHours(0, 0, 0, 0);
+            local.setFullYear(year, month - 1, day);
+            if (local.getDate() === day)
+                return local;
+        }
+    }
+    throw new TypeError("Invalid date");
 }

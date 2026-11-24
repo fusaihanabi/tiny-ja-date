@@ -181,9 +181,16 @@ formatRelativeJaDate(
                     <label for="baseDateInput" class="form-label fw-semibold">Base date</label>
                     <input id="baseDateInput" class="form-control form-control-lg" type="date" value="2026-05-12" />
                   </div>
-                  <div>
+                  <div class="mb-3">
                     <label for="holidayInput" class="form-label fw-semibold">休業日（任意）</label>
                     <input id="holidayInput" class="form-control form-control-lg" type="date" />
+                  </div>
+                  <div>
+                    <label for="timeZoneInput" class="form-label fw-semibold">タイムゾーン</label>
+                    <select id="timeZoneInput" class="form-select form-select-lg">
+                      <option value="">実行環境のタイムゾーン</option>
+                      <option value="Asia/Tokyo">日本時間（Asia/Tokyo）</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -284,11 +291,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.2.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.3.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.2.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.3.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -296,7 +303,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.2.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.3.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -319,7 +326,6 @@ formatRelativeJaDate(
               <div class="code-block">
 <pre class="mb-0"><code>// Outside the scope of tiny-ja-date:
 // - Japanese holiday data
-// - timezone conversion
 // - wareki formatting
 // - calendar generation
 // - date-fns/dayjs replacement</code></pre>
@@ -342,16 +348,10 @@ formatRelativeJaDate(
     <script type="module">
       import { formatJaDate, formatRelativeJaDate, isWeekendJP, nextBusinessDay } from "./index.js"
 
-      function formatIsoDate(date) {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, "0")
-        const day = String(date.getDate()).padStart(2, "0")
-        return `${year}-${month}-${day}`
-      }
-
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
       const holidayInput = document.getElementById("holidayInput")
+      const timeZoneInput = document.getElementById("timeZoneInput")
       const results = document.getElementById("demoResults")
 
       function resultRow(label, value, badgeClass = "text-bg-success") {
@@ -377,20 +377,22 @@ formatRelativeJaDate(
         }
 
         const holidays = holidayInput.value ? [holidayInput.value] : []
-        const next = nextBusinessDay(date, { holidays })
-        const weekend = isWeekendJP(date)
+        const options = { timeZone: timeZoneInput.value || undefined }
+        const next = nextBusinessDay(date, { ...options, holidays })
+        const weekend = isWeekendJP(date, options)
 
         results.innerHTML = [
-          resultRow("formatJaDate", formatJaDate(date)),
-          resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate)),
+          resultRow("formatJaDate", formatJaDate(date, options)),
+          resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate, options)),
           resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
-          resultRow("nextBusinessDay", `${formatIsoDate(next)} / ${formatJaDate(next)}`),
+          resultRow("nextBusinessDay", `${formatJaDate(next, options)} / ${next.toISOString()}`),
         ].join("")
       }
 
       dateInput.addEventListener("input", renderResults)
       baseDateInput.addEventListener("input", renderResults)
       holidayInput.addEventListener("input", renderResults)
+      timeZoneInput.addEventListener("change", renderResults)
       renderResults()
 
       document.querySelectorAll("[data-copy]").forEach((button) => {
