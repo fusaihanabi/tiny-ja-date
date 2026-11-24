@@ -77,22 +77,37 @@ isWeekendJP(new Date(2026, 4, 16))
 // true
 ```
 
-### `nextBusinessDay(date: Date | string | number): Date`
+### `nextBusinessDay(date: DateInput, options?: BusinessDayOptions): Date`
 
-Returns the next business day.
+Returns the start of the next business day in the runtime's local time zone.
 
-The input date itself is not included.
+The search starts the day after the input and skips Saturdays, Sundays, and
+any local calendar dates supplied in `options.holidays`. Each holiday accepts
+the same `DateInput` type as the input date.
 
 ```ts
 nextBusinessDay(new Date(2026, 4, 15))
 // Date for 2026-05-18
+
+nextBusinessDay("2026-05-15", { holidays: ["2026-05-18"] })
+// Date for 2026-05-19
 ```
 
-## Note
+## Date inputs
 
-Business day calculation excludes weekends only.
+- `YYYY-MM-DD` strings represent local calendar dates in the runtime's time zone.
+  Invalid dates such as `2026-02-30` throw a `TypeError`.
+- `Date` objects and Unix timestamps in milliseconds represent instants. The
+  functions use the instant's date in the runtime's local time zone.
+- For strings with a time, use ISO 8601 with an explicit offset such as
+  `2026-05-12T09:00:00+09:00` to identify an instant. Strings without an
+  explicit offset and other string formats follow JavaScript's `Date` parsing.
 
-Japanese holidays are intentionally out of scope for v0.1.
+### Upgrading from 0.1
+
+In 0.1, JavaScript parsed a bare `YYYY-MM-DD` string as midnight UTC. In 0.2,
+it represents the local date as written. Pass an explicit UTC timestamp such
+as `2026-05-12T00:00:00Z` to retain the 0.1 interpretation.
 
 ## Design policy
 
@@ -109,6 +124,9 @@ It does not:
 ---
 
 ## Live Demo
+
+Run `npm run build:demo` after changing the library source to refresh
+`docs/index.js`, the compiled module used by the demo.
 
 - Demo → `https://fusaihanabi.github.io/tiny-ja-date`
 - npm → `https://www.npmjs.com/package/tiny-ja-date`

@@ -1,9 +1,26 @@
 export type DateInput = Date | string | number
 
+export interface BusinessDayOptions {
+  holidays?: readonly DateInput[]
+}
+
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"] as const
 const ONE_DAY_MS = 86_400_000
 
 function toValidDate(input: DateInput): Date {
+  if (typeof input === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    const [year, month, day] = input.split("-").map(Number)
+    const date = new Date(0)
+    date.setHours(0, 0, 0, 0)
+    date.setFullYear(year, month - 1, day)
+
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      throw new TypeError("Invalid date")
+    }
+
+    return date
+  }
+
   const date = input instanceof Date
     ? new Date(input.getTime())
     : new Date(input)
@@ -15,8 +32,10 @@ function toValidDate(input: DateInput): Date {
   return date
 }
 
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+function localDayNumber(date: Date): number {
+  const utcDay = new Date(0)
+  utcDay.setUTCFullYear(date.getFullYear(), date.getMonth(), date.getDate())
+  return utcDay.getTime() / ONE_DAY_MS
 }
 
 export function formatJaDate(input: DateInput): string {
@@ -33,11 +52,9 @@ export function formatRelativeJaDate(
   input: DateInput,
   baseInput: DateInput = new Date(),
 ): string {
-  const date = startOfLocalDay(toValidDate(input))
-  const baseDate = startOfLocalDay(toValidDate(baseInput))
-
-  const diffMs = date.getTime() - baseDate.getTime()
-  const diffDays = Math.round(diffMs / ONE_DAY_MS)
+  const date = toValidDate(input)
+  const baseDate = toValidDate(baseInput)
+  const diffDays = localDayNumber(date) - localDayNumber(baseDate)
 
   if (diffDays === 0) return "今日"
   if (diffDays === -1) return "昨日"
@@ -54,13 +71,15 @@ export function isWeekendJP(input: DateInput): boolean {
   return day === 0 || day === 6
 }
 
-export function nextBusinessDay(input: DateInput): Date {
-  const date = startOfLocalDay(toValidDate(input))
-  date.setDate(date.getDate() + 1)
+export function nextBusinessDay(input: DateInput, options: BusinessDayOptions = {}): Date {
+  const date = toValidDate(input)
+  const holidays = new Set(options.holidays?.map((holiday) => localDayNumber(toValidDate(holiday))))
 
-  while (isWeekendJP(date)) {
+  date.setHours(0, 0, 0, 0)
+  do {
     date.setDate(date.getDate() + 1)
-  }
+    date.setHours(0, 0, 0, 0)
+  } while (isWeekendJP(date) || holidays.has(localDayNumber(date)))
 
   return date
 }

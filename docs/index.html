@@ -144,7 +144,7 @@ formatRelativeJaDate(
               <div class="card feature-card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <h2 class="h5 fw-bold">Weekend only</h2>
-                  <p class="muted mb-0">v0.1の営業日計算は土日のみ除外。祝日データは持ちません。</p>
+                  <p class="muted mb-0">営業日計算では、土日と指定した休業日を除外できます。</p>
                 </div>
               </div>
             </div>
@@ -177,12 +177,13 @@ formatRelativeJaDate(
                     <label for="dateInput" class="form-label fw-semibold">Date</label>
                     <input id="dateInput" class="form-control form-control-lg" type="date" value="2026-05-15" />
                   </div>
-                  <div>
+                  <div class="mb-3">
                     <label for="baseDateInput" class="form-label fw-semibold">Base date</label>
                     <input id="baseDateInput" class="form-control form-control-lg" type="date" value="2026-05-12" />
                   </div>
-                  <div class="form-text mt-3">
-                    このデモはサイト内の簡易実装で動いています。実際の利用では npm/CDN から読み込んでください。
+                  <div>
+                    <label for="holidayInput" class="form-label fw-semibold">休業日（任意）</label>
+                    <input id="holidayInput" class="form-control form-control-lg" type="date" />
                   </div>
                 </div>
               </div>
@@ -192,7 +193,7 @@ formatRelativeJaDate(
               <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <h3 class="h5 fw-bold mb-3">Results</h3>
-                  <div id="demoResults" class="d-grid gap-2"></div>
+                  <div id="demoResults" class="d-grid gap-2" aria-live="polite"></div>
                 </div>
               </div>
             </div>
@@ -226,7 +227,6 @@ formatRelativeJaDate(
           <div class="row justify-content-center mb-4">
             <div class="col-lg-8 text-center">
               <h2 class="fw-bold">API</h2>
-              <p class="muted mb-0">v0.1 は4つの関数だけです。</p>
             </div>
           </div>
 
@@ -262,7 +262,7 @@ formatRelativeJaDate(
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <h3 class="h5 fw-bold">nextBusinessDay</h3>
-                  <p class="muted">次の営業日を返します。v0.1では祝日は考慮しません。</p>
+                  <p class="muted">土日と、オプションの <code>holidays</code> で指定した日を飛ばします。</p>
                   <code>Date</code>
                 </div>
               </div>
@@ -284,11 +284,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.1.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.2.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.1.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.2.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -296,7 +296,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.1.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.2.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -317,7 +317,7 @@ formatRelativeJaDate(
             </div>
             <div class="col-lg-7">
               <div class="code-block">
-<pre class="mb-0"><code>// v0.1 does not include:
+<pre class="mb-0"><code>// Outside the scope of tiny-ja-date:
 // - Japanese holiday data
 // - timezone conversion
 // - wareki formatting
@@ -339,14 +339,8 @@ formatRelativeJaDate(
     </footer>
 
     <script src="https://unpkg.com/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
-    <script>
-      const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"]
-      const ONE_DAY_MS = 86400000
-
-      function parseDateInput(value) {
-        const [year, month, day] = value.split("-").map(Number)
-        return new Date(year, month - 1, day)
-      }
+    <script type="module">
+      import { formatJaDate, formatRelativeJaDate, isWeekendJP, nextBusinessDay } from "./index.js"
 
       function formatIsoDate(date) {
         const year = date.getFullYear()
@@ -355,44 +349,9 @@ formatRelativeJaDate(
         return `${year}-${month}-${day}`
       }
 
-      function startOfLocalDay(date) {
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-      }
-
-      function formatJaDate(date) {
-        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${WEEKDAYS_JA[date.getDay()]}）`
-      }
-
-      function formatRelativeJaDate(date, baseDate) {
-        const target = startOfLocalDay(date)
-        const base = startOfLocalDay(baseDate)
-        const diffDays = Math.round((target.getTime() - base.getTime()) / ONE_DAY_MS)
-
-        if (diffDays === 0) return "今日"
-        if (diffDays === -1) return "昨日"
-        if (diffDays === 1) return "明日"
-        if (diffDays < 0) return `${Math.abs(diffDays)}日前`
-        return `${diffDays}日後`
-      }
-
-      function isWeekendJP(date) {
-        const day = date.getDay()
-        return day === 0 || day === 6
-      }
-
-      function nextBusinessDay(date) {
-        const next = startOfLocalDay(date)
-        next.setDate(next.getDate() + 1)
-
-        while (isWeekendJP(next)) {
-          next.setDate(next.getDate() + 1)
-        }
-
-        return next
-      }
-
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
+      const holidayInput = document.getElementById("holidayInput")
       const results = document.getElementById("demoResults")
 
       function resultRow(label, value, badgeClass = "text-bg-success") {
@@ -405,9 +364,20 @@ formatRelativeJaDate(
       }
 
       function renderResults() {
-        const date = parseDateInput(dateInput.value)
-        const baseDate = parseDateInput(baseDateInput.value)
-        const next = nextBusinessDay(date)
+        const date = dateInput.value
+        const baseDate = baseDateInput.value
+        if (!date || !baseDate) {
+          results.textContent = "日付と基準日を入力してください。"
+          return
+        }
+
+        if ([date, baseDate, holidayInput.value].some((value) => value && !/^\d{4}-\d{2}-\d{2}$/.test(value))) {
+          results.textContent = "年は4桁で入力してください。"
+          return
+        }
+
+        const holidays = holidayInput.value ? [holidayInput.value] : []
+        const next = nextBusinessDay(date, { holidays })
         const weekend = isWeekendJP(date)
 
         results.innerHTML = [
@@ -420,6 +390,7 @@ formatRelativeJaDate(
 
       dateInput.addEventListener("input", renderResults)
       baseDateInput.addEventListener("input", renderResults)
+      holidayInput.addEventListener("input", renderResults)
       renderResults()
 
       document.querySelectorAll("[data-copy]").forEach((button) => {

@@ -1,6 +1,6 @@
 {
   "name": "tiny-ja-date",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Tiny TypeScript date utilities for Japanese UI.",
   "type": "module",
   "exports": {
@@ -16,8 +16,9 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:demo": "tsc --declaration false --outDir docs",
     "test": "vitest",
-    "prepublishOnly": "npm run test && npm run build"
+    "prepublishOnly": "npm test -- --run && npm run build"
   },
   "keywords": [
     "japanese",
