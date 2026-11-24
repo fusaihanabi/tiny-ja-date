@@ -99,7 +99,7 @@
               Japanese date labels,<br class="d-none d-lg-block" /> made tiny.
             </h1>
             <p class="lead muted mb-4">
-              日本語の日付表示、相対日付、土日・営業日判定、次の営業日計算を提供する小さな TypeScript ライブラリです。
+              日本語の日付表示、相対日付、土日・営業日判定、営業日数の加算・減算を提供する小さな TypeScript ライブラリです。
             </p>
             <div class="d-flex flex-column flex-sm-row gap-3">
               <a href="#demo" class="btn btn-success btn-lg">Try demo</a>
@@ -185,12 +185,16 @@ formatRelativeJaDate(
                     <label for="holidayInput" class="form-label fw-semibold">休業日（任意）</label>
                     <input id="holidayInput" class="form-control form-control-lg" type="date" />
                   </div>
-                  <div>
+                  <div class="mb-3">
                     <label for="timeZoneInput" class="form-label fw-semibold">タイムゾーン</label>
                     <select id="timeZoneInput" class="form-select form-select-lg">
                       <option value="">実行環境のタイムゾーン</option>
                       <option value="Asia/Tokyo">日本時間（Asia/Tokyo）</option>
                     </select>
+                  </div>
+                  <div>
+                    <label for="businessDaysInput" class="form-label fw-semibold">営業日数</label>
+                    <input id="businessDaysInput" class="form-control form-control-lg" type="number" step="1" value="2" />
                   </div>
                 </div>
               </div>
@@ -283,6 +287,15 @@ formatRelativeJaDate(
                 </div>
               </div>
             </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">addBusinessDays</h3>
+                  <p class="muted">正の数で先へ、負の数で前へ進みます。0 は入力日の始まりを返します。</p>
+                  <code>Date</code>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -300,11 +313,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.4.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.5.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.4.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.5.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -312,7 +325,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.4.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.5.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -355,12 +368,13 @@ formatRelativeJaDate(
 
     <script src="https://unpkg.com/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     <script type="module">
-      import { formatJaDate, formatRelativeJaDate, isBusinessDay, isWeekendJP, nextBusinessDay } from "./index.js"
+      import { addBusinessDays, formatJaDate, formatRelativeJaDate, isBusinessDay, isWeekendJP, nextBusinessDay } from "./index.js"
 
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
       const holidayInput = document.getElementById("holidayInput")
       const timeZoneInput = document.getElementById("timeZoneInput")
+      const businessDaysInput = document.getElementById("businessDaysInput")
       const results = document.getElementById("demoResults")
 
       function resultRow(label, value, badgeClass = "text-bg-success") {
@@ -370,6 +384,21 @@ formatRelativeJaDate(
             <span class="badge ${badgeClass} align-self-start align-self-md-center">${value}</span>
           </div>
         `
+      }
+
+      function businessDaysRow(date, options) {
+        const amount = businessDaysInput.valueAsNumber
+        if (!Number.isSafeInteger(amount)) {
+          return resultRow("addBusinessDays", "営業日数を整数で入力してください。", "text-bg-warning")
+        }
+
+        try {
+          const result = addBusinessDays(date, amount, options)
+          return resultRow("addBusinessDays", `${formatJaDate(result, options)} / ${result.toISOString()}`)
+        } catch (error) {
+          if (!(error instanceof TypeError)) throw error
+          return resultRow("addBusinessDays", "結果の日付を取得できません。", "text-bg-warning")
+        }
       }
 
       function renderResults() {
@@ -398,6 +427,7 @@ formatRelativeJaDate(
           resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
           resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
           resultRow("nextBusinessDay", `${formatJaDate(next, options)} / ${next.toISOString()}`),
+          businessDaysRow(date, businessOptions),
         ].join("")
       }
 
@@ -405,6 +435,7 @@ formatRelativeJaDate(
       baseDateInput.addEventListener("input", renderResults)
       holidayInput.addEventListener("input", renderResults)
       timeZoneInput.addEventListener("change", renderResults)
+      businessDaysInput.addEventListener("input", renderResults)
       renderResults()
 
       document.querySelectorAll("[data-copy]").forEach((button) => {

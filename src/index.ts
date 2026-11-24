@@ -178,19 +178,23 @@ function holidayDays(
   return new Set(holidays?.map((holiday) => calendarDay(holiday, formatter)))
 }
 
+function dayStart(day: number, formatter: Intl.DateTimeFormat | undefined): Date | undefined {
+  if (formatter) return zonedDayStart(day, formatter)
+
+  const { year, month, day: dayOfMonth } = utcDateParts(day)
+  const local = new Date(0)
+  local.setHours(0, 0, 0, 0)
+  local.setFullYear(year, month - 1, dayOfMonth)
+  return local.getDate() === dayOfMonth ? local : undefined
+}
+
 function businessDayStart(
   candidate: number,
   holidays: ReadonlySet<number>,
   formatter: Intl.DateTimeFormat | undefined,
 ): Date | undefined {
   if (isWeekend(candidate) || holidays.has(candidate)) return undefined
-  if (formatter) return zonedDayStart(candidate, formatter)
-
-  const { year, month, day } = utcDateParts(candidate)
-  const local = new Date(0)
-  local.setHours(0, 0, 0, 0)
-  local.setFullYear(year, month - 1, day)
-  return local.getDate() === day ? local : undefined
+  return dayStart(candidate, formatter)
 }
 
 export function formatJaDate(input: DateInput, options: DateOptions = {}): string {
@@ -229,15 +233,37 @@ export function isBusinessDay(input: DateInput, options: BusinessDayOptions = {}
   return businessDayStart(day, holidays, formatter) !== undefined
 }
 
-export function nextBusinessDay(input: DateInput, options: BusinessDayOptions = {}): Date {
+export function addBusinessDays(input: DateInput, amount: number, options: BusinessDayOptions = {}): Date {
+  if (!Number.isSafeInteger(amount)) throw new RangeError("Expected a safe integer business-day amount")
+
   const formatter = createFormatter(options.timeZone)
   const day = calendarDay(input, formatter)
   const holidays = holidayDays(options.holidays, formatter)
 
-  for (let candidate = day + ONE_DAY_MS; candidate <= MAX_DATE_MS + ONE_DAY_MS; candidate += ONE_DAY_MS) {
+  if (amount === 0) {
+    const start = dayStart(day, formatter)
+    if (!start) throw new TypeError("Invalid date")
+    return start
+  }
+
+  const direction = Math.sign(amount)
+  const step = direction * ONE_DAY_MS
+  // A local calendar date can extend one day beyond the UTC Date limits.
+  const limit = MAX_DATE_MS + ONE_DAY_MS
+  let remaining = Math.abs(amount)
+  if (remaining > (limit - direction * day) / ONE_DAY_MS) throw new TypeError("Invalid date")
+
+  for (let candidate = day + step; Math.abs(candidate) <= limit; candidate += step) {
     const start = businessDayStart(candidate, holidays, formatter)
-    if (start) return start
+    if (!start) continue
+
+    remaining -= 1
+    if (remaining === 0) return start
   }
 
   throw new TypeError("Invalid date")
+}
+
+export function nextBusinessDay(input: DateInput, options: BusinessDayOptions = {}): Date {
+  return addBusinessDays(input, 1, options)
 }

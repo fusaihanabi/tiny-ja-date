@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  addBusinessDays,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -191,6 +192,50 @@ describe("isBusinessDay", () => {
     expect(() => isBusinessDay("2026-02-30")).toThrow(TypeError)
     expect(() => isBusinessDay("2026-11-21", { timeZone: "Invalid/Zone" })).toThrow(RangeError)
     expect(() => isBusinessDay("2026-11-21", { holidays: ["2026-02-30"] })).toThrow(TypeError)
+  })
+})
+
+describe("addBusinessDays", () => {
+  const tokyo = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
+
+  it("counts weekdays forward and backward across weekends and holidays", () => {
+    expect(addBusinessDays("2026-11-20", 2, tokyo).toISOString()).toBe("2026-11-24T15:00:00.000Z")
+    expect(addBusinessDays("2026-11-24", -1, tokyo).toISOString()).toBe("2026-11-19T15:00:00.000Z")
+    expect(addBusinessDays("2026-11-22", -1, tokyo).toISOString()).toBe("2026-11-19T15:00:00.000Z")
+    expect(addBusinessDays("2026-11-21", 1, tokyo).toISOString()).toBe("2026-11-23T15:00:00.000Z")
+  })
+
+  it("returns the input date's start for zero even on a weekend or holiday", () => {
+    expect(addBusinessDays("2026-11-21T12:00:00+09:00", 0, tokyo).toISOString())
+      .toBe("2026-11-20T15:00:00.000Z")
+    expect(addBusinessDays("2026-11-23", -0, tokyo).toISOString()).toBe("2026-11-22T15:00:00.000Z")
+    expect(() => addBusinessDays("2026-11-23", 0, { holidays: ["2026-02-30"] })).toThrow(TypeError)
+  })
+
+  it("uses the first valid time and skips dates that never occur", () => {
+    expect(addBusinessDays("1986-01-01", 0, { timeZone: "Asia/Kathmandu" }).toISOString())
+      .toBe("1985-12-31T18:30:00.000Z")
+    const apia = { timeZone: "Pacific/Apia" }
+    expect(addBusinessDays("2012-01-02", -1, apia).toISOString()).toBe("2011-12-29T10:00:00.000Z")
+    expect(() => addBusinessDays("2011-12-30", 0, apia)).toThrow(TypeError)
+  })
+
+  it("rejects amounts that are not safe integers", () => {
+    for (const amount of [1.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => addBusinessDays("2026-11-20", amount, tokyo)).toThrow(RangeError)
+    }
+  })
+
+  it("rejects results beyond the Date range in either direction", () => {
+    const utc = { timeZone: "UTC" }
+    const limit = 8_640_000_000_000_000
+    expect(() => addBusinessDays(limit, 1, utc)).toThrow(TypeError)
+    expect(() => addBusinessDays(-limit, -1, utc)).toThrow(TypeError)
+    expect(() => addBusinessDays("2026-11-20", Number.MAX_SAFE_INTEGER, utc)).toThrow(TypeError)
+  })
+
+  it("agrees with nextBusinessDay for an amount of one", () => {
+    expect(addBusinessDays("2026-11-20", 1, tokyo)).toEqual(nextBusinessDay("2026-11-20", tokyo))
   })
 })
 
