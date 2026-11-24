@@ -5,6 +5,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - 日本語の日付表示
 - 日本語の相対日付表示
 - 土日判定
+- 営業日判定
 - 次の営業日計算
 
 ## Install
@@ -19,6 +20,7 @@ npm install tiny-ja-date
 import {
   formatJaDate,
   formatRelativeJaDate,
+  isBusinessDay,
   isWeekendJP,
   nextBusinessDay,
 } from "tiny-ja-date"
@@ -31,6 +33,9 @@ formatRelativeJaDate(new Date(2026, 4, 15), new Date(2026, 4, 12))
 
 isWeekendJP(new Date(2026, 4, 16))
 // true
+
+isBusinessDay("2026-05-18", { holidays: ["2026-05-18"] })
+// false
 
 nextBusinessDay(new Date(2026, 4, 15))
 // Date for 2026-05-18
@@ -77,6 +82,23 @@ isWeekendJP(new Date(2026, 4, 16))
 // true
 ```
 
+### `isBusinessDay(date: DateInput, options?: BusinessDayOptions): boolean`
+
+Checks the input date itself in the selected time zone. Returns `false` for
+Saturdays, Sundays, dates in `options.holidays`, and dates skipped entirely by
+the time zone. A weekday that starts after midnight can still be a business day.
+Invalid holiday inputs throw a `TypeError`, even when the input falls on a weekend.
+
+```ts
+const options = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
+
+isBusinessDay("2026-11-23", options)
+// false
+
+isBusinessDay("2026-11-24", options)
+// true
+```
+
 ### `nextBusinessDay(date: DateInput, options?: BusinessDayOptions): Date`
 
 Returns a `Date` for the start of the next business day in the selected time
@@ -97,7 +119,7 @@ nextBusinessDay("2026-05-15", { holidays: ["2026-05-18"] })
 
 ## Time zones
 
-All four functions accept an optional `timeZone` such as `"Asia/Tokyo"`.
+All public functions accept an optional `timeZone` such as `"Asia/Tokyo"`.
 When omitted, they keep the runtime-local behavior of 0.2. The runtime's
 `Intl.DateTimeFormat` supplies the time zone rules. Unrecognized IANA names
 throw a `RangeError`.

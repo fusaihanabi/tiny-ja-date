@@ -99,7 +99,7 @@
               Japanese date labels,<br class="d-none d-lg-block" /> made tiny.
             </h1>
             <p class="lead muted mb-4">
-              日本語の日付表示、相対日付、土日判定、次の営業日計算を提供する小さな TypeScript ライブラリです。
+              日本語の日付表示、相対日付、土日・営業日判定、次の営業日計算を提供する小さな TypeScript ライブラリです。
             </p>
             <div class="d-flex flex-column flex-sm-row gap-3">
               <a href="#demo" class="btn btn-success btn-lg">Try demo</a>
@@ -268,6 +268,15 @@ formatRelativeJaDate(
             <div class="col-md-6">
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">isBusinessDay</h3>
+                  <p class="muted">指定した日が営業日かを判定します。</p>
+                  <code>true</code> / <code>false</code>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                   <h3 class="h5 fw-bold">nextBusinessDay</h3>
                   <p class="muted">土日と、オプションの <code>holidays</code> で指定した日を飛ばします。</p>
                   <code>Date</code>
@@ -291,11 +300,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.3.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.4.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.3.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.4.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -303,7 +312,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.3.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.4.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -346,7 +355,7 @@ formatRelativeJaDate(
 
     <script src="https://unpkg.com/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     <script type="module">
-      import { formatJaDate, formatRelativeJaDate, isWeekendJP, nextBusinessDay } from "./index.js"
+      import { formatJaDate, formatRelativeJaDate, isBusinessDay, isWeekendJP, nextBusinessDay } from "./index.js"
 
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
@@ -378,13 +387,16 @@ formatRelativeJaDate(
 
         const holidays = holidayInput.value ? [holidayInput.value] : []
         const options = { timeZone: timeZoneInput.value || undefined }
-        const next = nextBusinessDay(date, { ...options, holidays })
+        const businessOptions = { ...options, holidays }
+        const next = nextBusinessDay(date, businessOptions)
+        const businessDay = isBusinessDay(date, businessOptions)
         const weekend = isWeekendJP(date, options)
 
         results.innerHTML = [
           resultRow("formatJaDate", formatJaDate(date, options)),
           resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate, options)),
           resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
+          resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
           resultRow("nextBusinessDay", `${formatJaDate(next, options)} / ${next.toISOString()}`),
         ].join("")
       }

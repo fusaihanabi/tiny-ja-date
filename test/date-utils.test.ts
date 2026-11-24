@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   formatJaDate,
   formatRelativeJaDate,
+  isBusinessDay,
   isWeekendJP,
   nextBusinessDay,
 } from "../src"
@@ -153,6 +154,43 @@ describe("isWeekendJP", () => {
 
   it("throws for invalid dates", () => {
     expect(() => isWeekendJP("invalid-date")).toThrow(TypeError)
+  })
+})
+
+describe("isBusinessDay", () => {
+  it("accepts weekdays and rejects weekends and holidays", () => {
+    const options = { holidays: ["2026-11-23"] }
+
+    expect(isBusinessDay("2026-11-21")).toBe(false)
+    expect(isBusinessDay("2026-11-22")).toBe(false)
+    expect(isBusinessDay("2026-11-23", options)).toBe(false)
+    expect(isBusinessDay("2026-11-24", options)).toBe(true)
+  })
+
+  it("uses the selected time zone for the input and holidays", () => {
+    const instant = new Date("2026-11-20T15:30:00Z")
+    const holiday = "2026-11-22T15:00:00Z"
+
+    expect(isBusinessDay(instant, { timeZone: "Asia/Tokyo" })).toBe(false)
+    expect(isBusinessDay(instant, { timeZone: "America/Los_Angeles" })).toBe(true)
+    expect(isBusinessDay("2026-11-23", { timeZone: "Asia/Tokyo", holidays: [holiday] })).toBe(false)
+    expect(isBusinessDay("2026-11-23", { timeZone: "America/Los_Angeles", holidays: [holiday] })).toBe(true)
+  })
+
+  it("accepts weekdays with missing midnight but rejects skipped weekdays", () => {
+    expect(isBusinessDay("1986-01-01", { timeZone: "Asia/Kathmandu" })).toBe(true)
+    expect(isBusinessDay("2011-12-30", { timeZone: "Pacific/Apia" })).toBe(false)
+  })
+
+  it("agrees with nextBusinessDay under the same options", () => {
+    const options = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
+    expect(isBusinessDay(nextBusinessDay("2026-11-20", options), options)).toBe(true)
+  })
+
+  it("validates invalid dates, zones, and holidays even when the input is a weekend", () => {
+    expect(() => isBusinessDay("2026-02-30")).toThrow(TypeError)
+    expect(() => isBusinessDay("2026-11-21", { timeZone: "Invalid/Zone" })).toThrow(RangeError)
+    expect(() => isBusinessDay("2026-11-21", { holidays: ["2026-02-30"] })).toThrow(TypeError)
   })
 })
 

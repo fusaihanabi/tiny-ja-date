@@ -37,6 +37,12 @@ function checkedUtcDay(year, month, day) {
     }
     return value;
 }
+function dateOnlyDay(input) {
+    if (typeof input !== "string" || !DATE_ONLY.test(input))
+        return undefined;
+    const [year, month, day] = input.split("-").map(Number);
+    return checkedUtcDay(year, month, day);
+}
 function utcDateParts(day) {
     const cycles = Math.floor(day / GREGORIAN_CYCLE_MS);
     const date = new Date(day - cycles * GREGORIAN_CYCLE_MS);
@@ -79,10 +85,9 @@ function calendarDay(input, formatter) {
         return utcDay(date.getFullYear(), date.getMonth() + 1, date.getDate());
     }
     if (typeof input === "string") {
-        if (DATE_ONLY.test(input)) {
-            const [year, month, day] = input.split("-").map(Number);
-            return checkedUtcDay(year, month, day);
-        }
+        const day = dateOnlyDay(input);
+        if (day !== undefined)
+            return day;
         const match = OFFSET_DATE_TIME.exec(input);
         if (!match)
             throw new TypeError("Expected YYYY-MM-DD or an ISO date-time with an offset");
@@ -139,6 +144,20 @@ function isWeekend(day) {
     const weekday = weekdayOf(day);
     return weekday === 0 || weekday === 6;
 }
+function holidayDays(holidays, formatter) {
+    return new Set(holidays?.map((holiday) => calendarDay(holiday, formatter)));
+}
+function businessDayStart(candidate, holidays, formatter) {
+    if (isWeekend(candidate) || holidays.has(candidate))
+        return undefined;
+    if (formatter)
+        return zonedDayStart(candidate, formatter);
+    const { year, month, day } = utcDateParts(candidate);
+    const local = new Date(0);
+    local.setHours(0, 0, 0, 0);
+    local.setFullYear(year, month - 1, day);
+    return local.getDate() === day ? local : undefined;
+}
 export function formatJaDate(input, options = {}) {
     const formatter = createFormatter(options.timeZone);
     const date = calendarDay(input, formatter);
@@ -162,26 +181,20 @@ export function formatRelativeJaDate(input, baseInput = new Date(), options = {}
 export function isWeekendJP(input, options = {}) {
     return isWeekend(calendarDay(input, createFormatter(options.timeZone)));
 }
+export function isBusinessDay(input, options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    const day = dateOnlyDay(input) ?? calendarDay(input, formatter);
+    const holidays = holidayDays(options.holidays, formatter);
+    return businessDayStart(day, holidays, formatter) !== undefined;
+}
 export function nextBusinessDay(input, options = {}) {
     const formatter = createFormatter(options.timeZone);
     const day = calendarDay(input, formatter);
-    const holidays = new Set(options.holidays?.map((holiday) => calendarDay(holiday, formatter)));
+    const holidays = holidayDays(options.holidays, formatter);
     for (let candidate = day + ONE_DAY_MS; candidate <= MAX_DATE_MS + ONE_DAY_MS; candidate += ONE_DAY_MS) {
-        if (isWeekend(candidate) || holidays.has(candidate))
-            continue;
-        if (formatter) {
-            const start = zonedDayStart(candidate, formatter);
-            if (start)
-                return start;
-        }
-        else {
-            const { year, month, day } = utcDateParts(candidate);
-            const local = new Date(0);
-            local.setHours(0, 0, 0, 0);
-            local.setFullYear(year, month - 1, day);
-            if (local.getDate() === day)
-                return local;
-        }
+        const start = businessDayStart(candidate, holidays, formatter);
+        if (start)
+            return start;
     }
     throw new TypeError("Invalid date");
 }
