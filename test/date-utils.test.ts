@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import {
   addBusinessDays,
+  countBusinessDays,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -236,6 +237,53 @@ describe("addBusinessDays", () => {
 
   it("agrees with nextBusinessDay for an amount of one", () => {
     expect(addBusinessDays("2026-11-20", 1, tokyo)).toEqual(nextBusinessDay("2026-11-20", tokyo))
+  })
+})
+
+describe("countBusinessDays", () => {
+  const tokyo = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
+
+  it("counts in both directions across weekends and holidays", () => {
+    expect(countBusinessDays("2026-11-20", "2026-11-25", tokyo)).toBe(2)
+    expect(countBusinessDays("2026-11-25", "2026-11-20", tokyo)).toBe(-2)
+    expect(countBusinessDays("2026-11-20", "2026-11-23", tokyo)).toBe(0)
+    expect(countBusinessDays("2026-11-23", "2026-11-20", tokyo)).toBe(-1)
+  })
+
+  it("excludes the origin and includes an eligible destination", () => {
+    expect(countBusinessDays("2026-11-20", "2026-11-22")).toBe(0)
+    expect(countBusinessDays("2026-11-22", "2026-11-20")).toBe(-1)
+    expect(countBusinessDays("2026-11-22", "2026-11-21")).toBe(0)
+  })
+
+  it("validates both endpoints and holidays even when the count is zero", () => {
+    expect(countBusinessDays("2026-11-24", "2026-11-23T15:30:00Z", tokyo)).toBe(0)
+    expect(() => countBusinessDays("2026-02-30", "2026-11-24")).toThrow(TypeError)
+    expect(() => countBusinessDays("2026-11-24", "2026-02-30")).toThrow(TypeError)
+    expect(() => countBusinessDays("2026-11-24", "2026-11-24", { holidays: ["2026-02-30"] }))
+      .toThrow(TypeError)
+    expect(() => countBusinessDays("2026-11-24", "2026-11-24", { timeZone: "Invalid/Zone" }))
+      .toThrow(RangeError)
+  })
+
+  it("counts in the selected zone across a daylight saving change", () => {
+    const losAngeles = { timeZone: "America/Los_Angeles" }
+    expect(countBusinessDays("2026-03-06T08:00:00Z", "2026-03-10T07:00:00Z", losAngeles)).toBe(2)
+    expect(countBusinessDays("2026-03-10T07:00:00Z", "2026-03-06T08:00:00Z", losAngeles)).toBe(-2)
+  })
+
+  it("skips a missing date, including when it is the destination", () => {
+    const apia = { timeZone: "Pacific/Apia" }
+    expect(countBusinessDays("2011-12-29", "2012-01-02", apia)).toBe(1)
+    expect(countBusinessDays("2012-01-02", "2011-12-29", apia)).toBe(-1)
+    expect(countBusinessDays("2011-12-29", "2011-12-30", apia)).toBe(0)
+  })
+
+  it("recovers positive and negative amounts passed to addBusinessDays", () => {
+    const from = "2026-11-22"
+    for (const amount of [2, -2]) {
+      expect(countBusinessDays(from, addBusinessDays(from, amount, tokyo), tokyo)).toBe(amount)
+    }
   })
 })
 

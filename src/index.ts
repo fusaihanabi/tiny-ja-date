@@ -267,3 +267,21 @@ export function addBusinessDays(input: DateInput, amount: number, options: Busin
 export function nextBusinessDay(input: DateInput, options: BusinessDayOptions = {}): Date {
   return addBusinessDays(input, 1, options)
 }
+
+export function countBusinessDays(from: DateInput, to: DateInput, options: BusinessDayOptions = {}): number {
+  const formatter = createFormatter(options.timeZone)
+  const start = dateOnlyDay(from) ?? calendarDay(from, formatter)
+  const end = dateOnlyDay(to) ?? calendarDay(to, formatter)
+  const holidays = holidayDays(options.holidays, formatter)
+  const direction = Math.sign(end - start)
+  const step = direction * ONE_DAY_MS
+  let count = 0
+  let day = start
+
+  while (day !== end) {
+    day += step
+    if (businessDayStart(day, holidays, formatter)) count += direction
+  }
+
+  return count
+}

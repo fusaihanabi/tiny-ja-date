@@ -8,6 +8,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - 営業日判定
 - 次の営業日計算
 - 営業日数の加算・減算
+- 2つの日付間の営業日数
 
 ## Install
 
@@ -20,6 +21,7 @@ npm install tiny-ja-date
 ```ts
 import {
   addBusinessDays,
+  countBusinessDays,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -44,6 +46,9 @@ nextBusinessDay(new Date(2026, 4, 15))
 
 addBusinessDays("2026-05-15", 2)
 // Date for 2026-05-19
+
+countBusinessDays("2026-05-15", "2026-05-19")
+// 2
 ```
 
 ## API
@@ -143,6 +148,27 @@ addBusinessDays("2026-11-20", 2, options)
 
 addBusinessDays("2026-11-24", -1, options)
 // Start of 2026-11-20 in Tokyo
+```
+
+### `countBusinessDays(from: DateInput, to: DateInput, options?: BusinessDayOptions): number`
+
+Counts from the day after or before `from` through `to` in the selected time
+zone. The starting date is excluded, and the destination counts if it is a
+business day. Counts are positive going forward and negative going backward.
+The same calendar date or a range with no business days returns `0`.
+
+Weekends, dates in `options.holidays`, and dates skipped entirely by the time
+zone do not count. Both endpoints and all holiday inputs are validated even
+when the result is `0`.
+
+```ts
+const options = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
+
+countBusinessDays("2026-11-20", "2026-11-25", options) // 2
+countBusinessDays("2026-11-25", "2026-11-20", options) // -2
+
+countBusinessDays("2026-11-20", "2026-11-22", options) // 0
+countBusinessDays("2026-11-22", "2026-11-20", options) // -1
 ```
 
 ## Time zones

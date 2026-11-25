@@ -174,11 +174,11 @@ formatRelativeJaDate(
               <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <div class="mb-3">
-                    <label for="dateInput" class="form-label fw-semibold">Date</label>
+                    <label for="dateInput" class="form-label fw-semibold">日付（到着日）</label>
                     <input id="dateInput" class="form-control form-control-lg" type="date" value="2026-05-15" />
                   </div>
                   <div class="mb-3">
-                    <label for="baseDateInput" class="form-label fw-semibold">Base date</label>
+                    <label for="baseDateInput" class="form-label fw-semibold">基準日（出発日）</label>
                     <input id="baseDateInput" class="form-control form-control-lg" type="date" value="2026-05-12" />
                   </div>
                   <div class="mb-3">
@@ -296,6 +296,15 @@ formatRelativeJaDate(
                 </div>
               </div>
             </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">countBusinessDays</h3>
+                  <p class="muted">出発日を除き、到着日が営業日なら含めます。逆向きの営業日数は負の値になります。</p>
+                  <code>number</code>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -313,11 +322,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.5.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.6.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.5.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.6.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -325,7 +334,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.5.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.6.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -368,7 +377,15 @@ formatRelativeJaDate(
 
     <script src="https://unpkg.com/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     <script type="module">
-      import { addBusinessDays, formatJaDate, formatRelativeJaDate, isBusinessDay, isWeekendJP, nextBusinessDay } from "./index.js"
+      import {
+        addBusinessDays,
+        countBusinessDays,
+        formatJaDate,
+        formatRelativeJaDate,
+        isBusinessDay,
+        isWeekendJP,
+        nextBusinessDay,
+      } from "./index.js"
 
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
@@ -428,6 +445,7 @@ formatRelativeJaDate(
           resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
           resultRow("nextBusinessDay", `${formatJaDate(next, options)} / ${next.toISOString()}`),
           businessDaysRow(date, businessOptions),
+          resultRow("countBusinessDays", String(countBusinessDays(baseDate, date, businessOptions))),
         ].join("")
       }
 
