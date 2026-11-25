@@ -22,6 +22,7 @@ npm install tiny-ja-date
 import {
   addBusinessDays,
   countBusinessDays,
+  createBusinessCalendar,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -49,6 +50,10 @@ addBusinessDays("2026-05-15", 2)
 
 countBusinessDays("2026-05-15", "2026-05-19")
 // 2
+
+const calendar = createBusinessCalendar({ timeZone: "Asia/Tokyo", weekendDays: [0] })
+calendar.isBusinessDay("2026-11-21")
+// true
 ```
 
 ## API
@@ -171,6 +176,30 @@ countBusinessDays("2026-11-25", "2026-11-20", options) // -2
 
 countBusinessDays("2026-11-20", "2026-11-22", options) // 0
 countBusinessDays("2026-11-22", "2026-11-20", options) // -1
+```
+
+### `createBusinessCalendar(options?: BusinessDayOptions): BusinessCalendar`
+
+Creates a reusable calendar with `isBusinessDay(date)`, `nextBusinessDay(date)`,
+`addBusinessDays(date, amount)`, and `countBusinessDays(from, to)` methods.
+Each method follows the same rules as the standalone function. The factory
+validates the time zone, weekend days, and holidays when creating the calendar.
+Method arguments are validated on each call.
+
+The calendar stores the rules as they were at creation. Editing the original
+options, arrays, or holiday `Date` objects has no effect on an existing calendar.
+Create a new calendar when the rules change. The default uses the runtime's
+local time zone and closes Saturday and Sunday.
+
+```ts
+const calendar = createBusinessCalendar({
+  timeZone: "Asia/Tokyo",
+  weekendDays: [0],
+  holidays: ["2026-11-23"],
+})
+
+calendar.isBusinessDay("2026-11-21") // true
+calendar.countBusinessDays("2026-11-20", "2026-11-24") // 2
 ```
 
 ## Weekly closures

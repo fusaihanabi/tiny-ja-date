@@ -2,12 +2,75 @@ import { describe, expect, it, vi } from "vitest"
 import {
   addBusinessDays,
   countBusinessDays,
+  createBusinessCalendar,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
   isWeekendJP,
   nextBusinessDay,
 } from "../src"
+
+describe("createBusinessCalendar", () => {
+  it("matches the standalone functions with custom weekends, holidays, and time zone", () => {
+    const options = { timeZone: "Asia/Tokyo", weekendDays: [0], holidays: ["2026-11-23"] }
+    const calendar = createBusinessCalendar(options)
+    const input = "2026-11-20T15:30:00Z"
+
+    expect(calendar.isBusinessDay(input)).toBe(isBusinessDay(input, options))
+    expect(calendar.nextBusinessDay(input)).toEqual(nextBusinessDay(input, options))
+    expect(calendar.addBusinessDays(input, -2)).toEqual(addBusinessDays(input, -2, options))
+    expect(calendar.countBusinessDays(input, "2026-11-24"))
+      .toBe(countBusinessDays(input, "2026-11-24", options))
+  })
+
+  it("uses local dates and the default weekend when options are omitted", () => {
+    const calendar = createBusinessCalendar()
+
+    expect(calendar.isBusinessDay("2026-11-21")).toBe(false)
+    expect(calendar.nextBusinessDay("2026-11-20")).toEqual(new Date(2026, 10, 23))
+    expect(calendar.addBusinessDays("2026-11-20T12:30:00", 0)).toEqual(new Date(2026, 10, 20))
+    expect(calendar.countBusinessDays("2026-11-20", "2026-11-24")).toBe(2)
+  })
+
+  it("preserves the configured rules when the original options are edited", () => {
+    const holiday = new Date("2026-11-23T04:00:00Z")
+    const options = { timeZone: "Asia/Tokyo", weekendDays: [0], holidays: [holiday] }
+    const { isBusinessDay } = createBusinessCalendar(options)
+
+    holiday.setUTCDate(24)
+    options.holidays.push(new Date("2026-11-25T04:00:00Z"))
+    options.weekendDays.push(6)
+    options.timeZone = "America/Los_Angeles"
+
+    expect(isBusinessDay("2026-11-23")).toBe(false)
+    expect(isBusinessDay("2026-11-24")).toBe(true)
+    expect(isBusinessDay("2026-11-25")).toBe(true)
+    expect(isBusinessDay("2026-11-21")).toBe(true)
+    expect(isBusinessDay("2026-11-21T15:30:00Z")).toBe(false)
+  })
+
+  it("validates settings at creation and arguments when a method is called", () => {
+    expect(() => createBusinessCalendar({ timeZone: "Invalid/Zone" })).toThrow(RangeError)
+    expect(() => createBusinessCalendar({ weekendDays: [7] })).toThrow(RangeError)
+    expect(() => createBusinessCalendar({ holidays: ["2026-02-30"] })).toThrow(TypeError)
+
+    const calendar = createBusinessCalendar({ timeZone: "UTC" })
+    expect(() => calendar.isBusinessDay("2026-02-30")).toThrow(TypeError)
+    expect(() => calendar.nextBusinessDay("2026-02-30")).toThrow(TypeError)
+    expect(() => calendar.addBusinessDays("2026-11-20", 1.5)).toThrow(RangeError)
+    expect(() => calendar.countBusinessDays("2026-11-20", "2026-11-21T15:30:00")).toThrow(TypeError)
+  })
+
+  it("preserves full-week closure and day-zero behavior", () => {
+    const calendar = createBusinessCalendar({ timeZone: "UTC", weekendDays: [0, 1, 2, 3, 4, 5, 6] })
+
+    expect(calendar.isBusinessDay("2026-11-20")).toBe(false)
+    expect(calendar.countBusinessDays("2026-11-20", "2026-11-24")).toBe(0)
+    expect(() => calendar.nextBusinessDay("2026-11-20")).toThrow(TypeError)
+    expect(() => calendar.addBusinessDays("2026-11-20", -1)).toThrow(TypeError)
+    expect(calendar.addBusinessDays("2026-11-20", 0).toISOString()).toBe("2026-11-20T00:00:00.000Z")
+  })
+})
 
 describe("weekendDays", () => {
   it("opens Saturdays and combines weekly closures with holidays across all business-day functions", () => {

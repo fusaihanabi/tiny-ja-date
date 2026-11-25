@@ -155,7 +155,7 @@ function weekendDaySet(input) {
     }
     return days;
 }
-function businessCalendar(options, formatter) {
+function businessDayRules(options, formatter) {
     return {
         holidays: new Set(options.holidays?.map((holiday) => calendarDay(holiday, formatter))),
         weekendDays: weekendDaySet(options.weekendDays),
@@ -170,8 +170,8 @@ function dayStart(day, formatter) {
     local.setFullYear(year, month - 1, dayOfMonth);
     return local.getDate() === dayOfMonth ? local : undefined;
 }
-function businessDayStart(candidate, calendar, formatter) {
-    if (calendar.weekendDays.has(weekdayOf(candidate)) || calendar.holidays.has(candidate))
+function businessDayStart(candidate, rules, formatter) {
+    if (rules.weekendDays.has(weekdayOf(candidate)) || rules.holidays.has(candidate))
         return undefined;
     return dayStart(candidate, formatter);
 }
@@ -202,22 +202,21 @@ export function isWeekendJP(input, options = {}) {
 export function isBusinessDay(input, options = {}) {
     const formatter = createFormatter(options.timeZone);
     const day = dateOnlyDay(input) ?? calendarDay(input, formatter);
-    const calendar = businessCalendar(options, formatter);
-    return businessDayStart(day, calendar, formatter) !== undefined;
+    const rules = businessDayRules(options, formatter);
+    return businessDayStart(day, rules, formatter) !== undefined;
 }
-export function addBusinessDays(input, amount, options = {}) {
+function validateBusinessDayAmount(amount) {
     if (!Number.isSafeInteger(amount))
         throw new RangeError("Expected a safe integer business-day amount");
-    const formatter = createFormatter(options.timeZone);
-    const day = calendarDay(input, formatter);
-    const calendar = businessCalendar(options, formatter);
+}
+function moveBusinessDays(day, amount, rules, formatter) {
     if (amount === 0) {
         const start = dayStart(day, formatter);
         if (!start)
             throw new TypeError("Invalid date");
         return start;
     }
-    if (calendar.weekendDays.size === WEEKDAYS_JA.length)
+    if (rules.weekendDays.size === WEEKDAYS_JA.length)
         throw new TypeError("No business days");
     const direction = Math.sign(amount);
     const step = direction * ONE_DAY_MS;
@@ -227,7 +226,7 @@ export function addBusinessDays(input, amount, options = {}) {
     if (remaining > (limit - direction * day) / ONE_DAY_MS)
         throw new TypeError("Invalid date");
     for (let candidate = day + step; Math.abs(candidate) <= limit; candidate += step) {
-        const start = businessDayStart(candidate, calendar, formatter);
+        const start = businessDayStart(candidate, rules, formatter);
         if (!start)
             continue;
         remaining -= 1;
@@ -236,15 +235,17 @@ export function addBusinessDays(input, amount, options = {}) {
     }
     throw new TypeError("Invalid date");
 }
+export function addBusinessDays(input, amount, options = {}) {
+    validateBusinessDayAmount(amount);
+    const formatter = createFormatter(options.timeZone);
+    const day = calendarDay(input, formatter);
+    return moveBusinessDays(day, amount, businessDayRules(options, formatter), formatter);
+}
 export function nextBusinessDay(input, options = {}) {
     return addBusinessDays(input, 1, options);
 }
-export function countBusinessDays(from, to, options = {}) {
-    const formatter = createFormatter(options.timeZone);
-    const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
-    const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
-    const calendar = businessCalendar(options, formatter);
-    if (calendar.weekendDays.size === WEEKDAYS_JA.length)
+function countBusinessDaysBetween(start, end, rules, formatter) {
+    if (rules.weekendDays.size === WEEKDAYS_JA.length)
         return 0;
     const direction = Math.sign(end - start);
     const step = direction * ONE_DAY_MS;
@@ -252,8 +253,36 @@ export function countBusinessDays(from, to, options = {}) {
     let day = start;
     while (day !== end) {
         day += step;
-        if (businessDayStart(day, calendar, formatter))
+        if (businessDayStart(day, rules, formatter))
             count += direction;
     }
     return count;
+}
+export function countBusinessDays(from, to, options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
+    const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
+    return countBusinessDaysBetween(start, end, businessDayRules(options, formatter), formatter);
+}
+export function createBusinessCalendar(options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    const rules = businessDayRules(options, formatter);
+    return {
+        isBusinessDay(input) {
+            const day = dateOnlyDay(input) ?? calendarDay(input, formatter);
+            return businessDayStart(day, rules, formatter) !== undefined;
+        },
+        nextBusinessDay(input) {
+            return moveBusinessDays(calendarDay(input, formatter), 1, rules, formatter);
+        },
+        addBusinessDays(input, amount) {
+            validateBusinessDayAmount(amount);
+            return moveBusinessDays(calendarDay(input, formatter), amount, rules, formatter);
+        },
+        countBusinessDays(from, to) {
+            const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
+            const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
+            return countBusinessDaysBetween(start, end, rules, formatter);
+        },
+    };
 }
