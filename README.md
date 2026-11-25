@@ -85,7 +85,8 @@ formatRelativeJaDate(new Date(2026, 4, 15), new Date(2026, 4, 12))
 
 ### `isWeekendJP(date: DateInput, options?: DateOptions): boolean`
 
-Checks whether the date is Saturday or Sunday.
+Checks whether the date is Saturday or Sunday, regardless of the weekly
+closures used by the business-day functions.
 
 ```ts
 isWeekendJP(new Date(2026, 4, 16))
@@ -95,9 +96,10 @@ isWeekendJP(new Date(2026, 4, 16))
 ### `isBusinessDay(date: DateInput, options?: BusinessDayOptions): boolean`
 
 Checks the input date itself in the selected time zone. Returns `false` for
-Saturdays, Sundays, dates in `options.holidays`, and dates skipped entirely by
-the time zone. A weekday that starts after midnight can still be a business day.
-Invalid holiday inputs throw a `TypeError`, even when the input falls on a weekend.
+weekly closures, dates in `options.holidays`, and dates skipped entirely by
+the time zone. A date that starts after midnight can still be a business day.
+Invalid holiday inputs throw a `TypeError`, even when the input falls on a
+weekly closure.
 
 ```ts
 const options = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
@@ -115,9 +117,9 @@ Returns a `Date` for the start of the next business day in the selected time
 zone. If midnight is skipped, the result is the first valid time on that date.
 If a time zone skipped an entire date, the search continues to the following date.
 
-The search starts the day after the input and skips Saturdays, Sundays, and
-any local calendar dates supplied in `options.holidays`. Each holiday accepts
-the same `DateInput` type as the input date.
+The search starts the day after the input and skips weekly closures and dates
+in `options.holidays`. Each holiday accepts the same `DateInput` type as the
+input date.
 
 ```ts
 nextBusinessDay(new Date(2026, 4, 15))
@@ -130,7 +132,7 @@ nextBusinessDay("2026-05-15", { holidays: ["2026-05-18"] })
 ### `addBusinessDays(date: DateInput, amount: number, options?: BusinessDayOptions): Date`
 
 Counts forward for a positive amount and backward for a negative amount. Counting
-starts the day after or before the input and skips Saturdays, Sundays, dates in
+starts the day after or before the input and skips weekly closures, dates in
 `options.holidays`, and dates skipped entirely by the time zone.
 `addBusinessDays(date, 1, options)` is equivalent to `nextBusinessDay(date, options)`.
 
@@ -157,7 +159,7 @@ zone. The starting date is excluded, and the destination counts if it is a
 business day. Counts are positive going forward and negative going backward.
 The same calendar date or a range with no business days returns `0`.
 
-Weekends, dates in `options.holidays`, and dates skipped entirely by the time
+Weekly closures, dates in `options.holidays`, and dates skipped entirely by the time
 zone do not count. Both endpoints and all holiday inputs are validated even
 when the result is `0`.
 
@@ -169,6 +171,35 @@ countBusinessDays("2026-11-25", "2026-11-20", options) // -2
 
 countBusinessDays("2026-11-20", "2026-11-22", options) // 0
 countBusinessDays("2026-11-22", "2026-11-20", options) // -1
+```
+
+## Weekly closures
+
+`isBusinessDay`, `nextBusinessDay`, `addBusinessDays`, and `countBusinessDays`
+accept `weekendDays?: readonly number[]` in `BusinessDayOptions`. Use integers
+from `0` (Sunday) through `6` (Saturday).
+
+- Omitting `weekendDays` closes Saturday and Sunday, equivalent to `[0, 6]`.
+- An explicit array replaces the default. An empty array clears all weekly
+  closures. `holidays` still applies to individual dates.
+- Duplicate weekdays count once. Values outside the integer range throw a
+  `RangeError`. A non-array value throws a `TypeError`. Validation also applies
+  to zero-day moves and same-date counts.
+- Closing all seven days makes `isBusinessDay` return `false` and
+  `countBusinessDays` return `0`. `nextBusinessDay` and nonzero
+  `addBusinessDays` calls throw a `TypeError`. A zero-day move still returns the
+  start of the input date.
+
+```ts
+const options = {
+  timeZone: "Asia/Tokyo",
+  weekendDays: [0],
+  holidays: ["2026-11-23"],
+}
+
+isBusinessDay("2026-11-21", options) // true (Saturday)
+nextBusinessDay("2026-11-20", options) // Start of 2026-11-21 in Tokyo
+countBusinessDays("2026-11-20", "2026-11-24", options) // 2 (Saturday and Tuesday)
 ```
 
 ## Time zones

@@ -1,6 +1,6 @@
 {
   "name": "tiny-ja-date",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Tiny TypeScript date utilities for Japanese UI.",
   "type": "module",
   "exports": {

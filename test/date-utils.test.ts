@@ -9,6 +9,52 @@ import {
   nextBusinessDay,
 } from "../src"
 
+describe("weekendDays", () => {
+  it("opens Saturdays and combines weekly closures with holidays across all business-day functions", () => {
+    const options = { timeZone: "Asia/Tokyo", weekendDays: [0], holidays: ["2026-11-23"] }
+
+    expect(isBusinessDay("2026-11-21", options)).toBe(true)
+    expect(isWeekendJP("2026-11-21", options)).toBe(true)
+    expect(isBusinessDay("2026-11-22", options)).toBe(false)
+    expect(isBusinessDay("2026-11-23", options)).toBe(false)
+    expect(nextBusinessDay("2026-11-20", options).toISOString()).toBe("2026-11-20T15:00:00.000Z")
+    expect(addBusinessDays("2026-11-24", -1, options).toISOString()).toBe("2026-11-20T15:00:00.000Z")
+    expect(countBusinessDays("2026-11-20", "2026-11-24", options)).toBe(2)
+  })
+
+  it("can close midweek and remove weekly closures entirely", () => {
+    expect(isBusinessDay("2026-11-25", { weekendDays: [0, 3, 3] })).toBe(false)
+    expect(nextBusinessDay("2026-11-24", { weekendDays: [0, 3] })).toEqual(new Date(2026, 10, 26))
+    expect(isBusinessDay("2026-11-22", { weekendDays: [] })).toBe(true)
+    expect(isBusinessDay("2026-11-22", { weekendDays: [], holidays: ["2026-11-22"] })).toBe(false)
+  })
+
+  it("handles a calendar with no business days", () => {
+    const options = { timeZone: "Asia/Tokyo", weekendDays: [0, 1, 2, 3, 4, 5, 6] }
+
+    expect(isBusinessDay("2026-11-24", options)).toBe(false)
+    expect(countBusinessDays("2026-11-20", "2026-11-25", options)).toBe(0)
+    expect(countBusinessDays("2026-11-25", "2026-11-20", options)).toBe(0)
+    expect(() => nextBusinessDay("2026-11-20", options)).toThrow(TypeError)
+    expect(() => addBusinessDays("2026-11-20", -1, options)).toThrow(TypeError)
+    expect(addBusinessDays("2026-11-20", 0, options).toISOString()).toBe("2026-11-19T15:00:00.000Z")
+    expect(() => countBusinessDays("2026-11-20", "2026-11-20", {
+      ...options,
+      holidays: ["2026-02-30"],
+    })).toThrow(TypeError)
+  })
+
+  it("validates weekday options even for a zero move or same-date count", () => {
+    for (const day of [-1, 7, 1.5, NaN, Infinity]) {
+      expect(() => addBusinessDays("2026-11-20", 0, { weekendDays: [day] })).toThrow(RangeError)
+      expect(() => countBusinessDays("2026-11-20", "2026-11-20", { weekendDays: [day] })).toThrow(RangeError)
+    }
+    const malformed = { weekendDays: 0 as unknown as readonly number[] }
+    expect(() => isBusinessDay("2026-11-21", malformed)).toThrow(TypeError)
+    expect(() => nextBusinessDay("2026-11-20", malformed)).toThrow(TypeError)
+  })
+})
+
 describe("timeZone", () => {
   const tokyo = { timeZone: "Asia/Tokyo" }
   const losAngeles = { timeZone: "America/Los_Angeles" }

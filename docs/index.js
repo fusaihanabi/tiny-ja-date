@@ -1,4 +1,5 @@
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
+const DEFAULT_WEEKEND_DAYS = new Set([0, 6]);
 const ONE_DAY_MS = 86400000;
 const MAX_DATE_MS = 8640000000000000;
 const GREGORIAN_CYCLE_MS = 146097 * ONE_DAY_MS;
@@ -140,12 +141,25 @@ function weekdayOf(day) {
     const weekday = (day / ONE_DAY_MS + 4) % 7;
     return (weekday + 7) % 7;
 }
-function isWeekend(day) {
-    const weekday = weekdayOf(day);
-    return weekday === 0 || weekday === 6;
+function weekendDaySet(input) {
+    if (input === undefined)
+        return DEFAULT_WEEKEND_DAYS;
+    if (!Array.isArray(input))
+        throw new TypeError("Expected a weekendDays array");
+    const days = new Set();
+    for (const day of input) {
+        if (!Number.isInteger(day) || day < 0 || day >= WEEKDAYS_JA.length) {
+            throw new RangeError("Expected a weekend day from 0 to 6");
+        }
+        days.add(day);
+    }
+    return days;
 }
-function holidayDays(holidays, formatter) {
-    return new Set(holidays?.map((holiday) => calendarDay(holiday, formatter)));
+function businessCalendar(options, formatter) {
+    return {
+        holidays: new Set(options.holidays?.map((holiday) => calendarDay(holiday, formatter))),
+        weekendDays: weekendDaySet(options.weekendDays),
+    };
 }
 function dayStart(day, formatter) {
     if (formatter)
@@ -156,8 +170,8 @@ function dayStart(day, formatter) {
     local.setFullYear(year, month - 1, dayOfMonth);
     return local.getDate() === dayOfMonth ? local : undefined;
 }
-function businessDayStart(candidate, holidays, formatter) {
-    if (isWeekend(candidate) || holidays.has(candidate))
+function businessDayStart(candidate, calendar, formatter) {
+    if (calendar.weekendDays.has(weekdayOf(candidate)) || calendar.holidays.has(candidate))
         return undefined;
     return dayStart(candidate, formatter);
 }
@@ -182,26 +196,29 @@ export function formatRelativeJaDate(input, baseInput = new Date(), options = {}
     return `${diffDays}日後`;
 }
 export function isWeekendJP(input, options = {}) {
-    return isWeekend(calendarDay(input, createFormatter(options.timeZone)));
+    const day = calendarDay(input, createFormatter(options.timeZone));
+    return DEFAULT_WEEKEND_DAYS.has(weekdayOf(day));
 }
 export function isBusinessDay(input, options = {}) {
     const formatter = createFormatter(options.timeZone);
     const day = dateOnlyDay(input) ?? calendarDay(input, formatter);
-    const holidays = holidayDays(options.holidays, formatter);
-    return businessDayStart(day, holidays, formatter) !== undefined;
+    const calendar = businessCalendar(options, formatter);
+    return businessDayStart(day, calendar, formatter) !== undefined;
 }
 export function addBusinessDays(input, amount, options = {}) {
     if (!Number.isSafeInteger(amount))
         throw new RangeError("Expected a safe integer business-day amount");
     const formatter = createFormatter(options.timeZone);
     const day = calendarDay(input, formatter);
-    const holidays = holidayDays(options.holidays, formatter);
+    const calendar = businessCalendar(options, formatter);
     if (amount === 0) {
         const start = dayStart(day, formatter);
         if (!start)
             throw new TypeError("Invalid date");
         return start;
     }
+    if (calendar.weekendDays.size === WEEKDAYS_JA.length)
+        throw new TypeError("No business days");
     const direction = Math.sign(amount);
     const step = direction * ONE_DAY_MS;
     // A local calendar date can extend one day beyond the UTC Date limits.
@@ -210,7 +227,7 @@ export function addBusinessDays(input, amount, options = {}) {
     if (remaining > (limit - direction * day) / ONE_DAY_MS)
         throw new TypeError("Invalid date");
     for (let candidate = day + step; Math.abs(candidate) <= limit; candidate += step) {
-        const start = businessDayStart(candidate, holidays, formatter);
+        const start = businessDayStart(candidate, calendar, formatter);
         if (!start)
             continue;
         remaining -= 1;
@@ -226,14 +243,16 @@ export function countBusinessDays(from, to, options = {}) {
     const formatter = createFormatter(options.timeZone);
     const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
     const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
-    const holidays = holidayDays(options.holidays, formatter);
+    const calendar = businessCalendar(options, formatter);
+    if (calendar.weekendDays.size === WEEKDAYS_JA.length)
+        return 0;
     const direction = Math.sign(end - start);
     const step = direction * ONE_DAY_MS;
     let count = 0;
     let day = start;
     while (day !== end) {
         day += step;
-        if (businessDayStart(day, holidays, formatter))
+        if (businessDayStart(day, calendar, formatter))
             count += direction;
     }
     return count;

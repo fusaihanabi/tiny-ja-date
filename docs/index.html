@@ -144,7 +144,7 @@ formatRelativeJaDate(
               <div class="card feature-card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <h2 class="h5 fw-bold">Weekend only</h2>
-                  <p class="muted mb-0">営業日計算では、土日と指定した休業日を除外できます。</p>
+                  <p class="muted mb-0">営業日計算では、毎週の休業曜日と個別の休業日を指定できます。</p>
                 </div>
               </div>
             </div>
@@ -185,6 +185,18 @@ formatRelativeJaDate(
                     <label for="holidayInput" class="form-label fw-semibold">休業日（任意）</label>
                     <input id="holidayInput" class="form-control form-control-lg" type="date" />
                   </div>
+                  <fieldset class="mb-3">
+                    <legend class="fs-6 fw-semibold mb-1">毎週の休業曜日</legend>
+                    <div class="d-flex flex-wrap gap-2">
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="0" checked /> 日</label>
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="1" /> 月</label>
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="2" /> 火</label>
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="3" /> 水</label>
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="4" /> 木</label>
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="5" /> 金</label>
+                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="6" checked /> 土</label>
+                    </div>
+                  </fieldset>
                   <div class="mb-3">
                     <label for="timeZoneInput" class="form-label fw-semibold">タイムゾーン</label>
                     <select id="timeZoneInput" class="form-select form-select-lg">
@@ -282,7 +294,7 @@ formatRelativeJaDate(
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <h3 class="h5 fw-bold">nextBusinessDay</h3>
-                  <p class="muted">土日と、オプションの <code>holidays</code> で指定した日を飛ばします。</p>
+                  <p class="muted"><code>weekendDays</code> と <code>holidays</code> で指定した休業日を飛ばします。</p>
                   <code>Date</code>
                 </div>
               </div>
@@ -322,11 +334,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.6.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.7.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.6.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.7.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -334,7 +346,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.6.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.7.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -390,6 +402,7 @@ formatRelativeJaDate(
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
       const holidayInput = document.getElementById("holidayInput")
+      const weekendInputs = Array.from(document.querySelectorAll('input[name="weekendDays"]'))
       const timeZoneInput = document.getElementById("timeZoneInput")
       const businessDaysInput = document.getElementById("businessDaysInput")
       const results = document.getElementById("demoResults")
@@ -407,6 +420,9 @@ formatRelativeJaDate(
         const amount = businessDaysInput.valueAsNumber
         if (!Number.isSafeInteger(amount)) {
           return resultRow("addBusinessDays", "営業日数を整数で入力してください。", "text-bg-warning")
+        }
+        if (amount !== 0 && options.weekendDays.length === weekendInputs.length) {
+          return resultRow("addBusinessDays", "営業日がありません。", "text-bg-warning")
         }
 
         try {
@@ -432,9 +448,10 @@ formatRelativeJaDate(
         }
 
         const holidays = holidayInput.value ? [holidayInput.value] : []
+        const weekendDays = weekendInputs.filter((input) => input.checked).map((input) => Number(input.value))
         const options = { timeZone: timeZoneInput.value || undefined }
-        const businessOptions = { ...options, holidays }
-        const next = nextBusinessDay(date, businessOptions)
+        const businessOptions = { ...options, holidays, weekendDays }
+        const next = weekendDays.length === weekendInputs.length ? undefined : nextBusinessDay(date, businessOptions)
         const businessDay = isBusinessDay(date, businessOptions)
         const weekend = isWeekendJP(date, options)
 
@@ -443,7 +460,9 @@ formatRelativeJaDate(
           resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate, options)),
           resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
           resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
-          resultRow("nextBusinessDay", `${formatJaDate(next, options)} / ${next.toISOString()}`),
+          next
+            ? resultRow("nextBusinessDay", `${formatJaDate(next, options)} / ${next.toISOString()}`)
+            : resultRow("nextBusinessDay", "営業日がありません。", "text-bg-warning"),
           businessDaysRow(date, businessOptions),
           resultRow("countBusinessDays", String(countBusinessDays(baseDate, date, businessOptions))),
         ].join("")
@@ -452,6 +471,7 @@ formatRelativeJaDate(
       dateInput.addEventListener("input", renderResults)
       baseDateInput.addEventListener("input", renderResults)
       holidayInput.addEventListener("input", renderResults)
+      weekendInputs.forEach((input) => input.addEventListener("change", renderResults))
       timeZoneInput.addEventListener("change", renderResults)
       businessDaysInput.addEventListener("input", renderResults)
       renderResults()
