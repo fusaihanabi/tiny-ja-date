@@ -17,6 +17,11 @@ Tiny TypeScript date utilities for Japanese UI.
 npm install tiny-ja-date
 ```
 
+The package provides an ES module and TypeScript declarations.
+Version 1.0.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+and TypeScript 5.9.3. Time zone calculations use the runtime's
+`Intl.DateTimeFormat` and its time zone data.
+
 ## Usage
 
 ```ts
@@ -28,6 +33,7 @@ import {
   formatRelativeJaDate,
   isBusinessDay,
   isWeekendJP,
+  listBusinessDays,
   nextBusinessDay,
 } from "tiny-ja-date"
 
@@ -51,6 +57,9 @@ addBusinessDays("2026-05-15", 2)
 
 countBusinessDays("2026-05-15", "2026-05-19")
 // 2
+
+listBusinessDays("2026-05-15", "2026-05-19")
+// Dates for 2026-05-15, 2026-05-18, and 2026-05-19
 
 const calendar = createBusinessCalendar({ timeZone: "Asia/Tokyo", weekendDays: [0] })
 calendar.isBusinessDay("2026-11-21")
@@ -122,6 +131,7 @@ isBusinessDay("2026-11-24", options)
 Returns a `Date` for the start of the next business day in the selected time
 zone. If midnight is skipped, the result is the first valid time on that date.
 If a time zone skipped an entire date, the search continues to the following date.
+Calling `toISOString()` on the result displays the instant in UTC.
 
 The search starts the day after the input and skips weekly closures and dates
 in `options.holidays`. Each holiday accepts the same `DateInput` type as the
@@ -201,6 +211,9 @@ listBusinessDays("2026-11-20", "2026-11-24", options)
 
 listBusinessDays("2026-11-24", "2026-11-20", options)
 // Starts of November 24, 21, and 20 in Tokyo
+
+countBusinessDays("2026-11-20", "2026-11-24", options)
+// 2, starting the count after November 20
 ```
 
 ### `createBusinessCalendar(options?: BusinessDayOptions): BusinessCalendar`
@@ -263,9 +276,9 @@ countBusinessDays("2026-11-20", "2026-11-24", options) // 2 (Saturday and Tuesda
 ## Time zones
 
 All public functions accept an optional `timeZone` such as `"Asia/Tokyo"`.
-When omitted, they keep the runtime-local behavior of 0.2. The runtime's
-`Intl.DateTimeFormat` supplies the time zone rules. Unrecognized IANA names
-throw a `RangeError`.
+The selected zone applies to input dates, base dates, range endpoints, and
+holidays. Omitting it uses the runtime's local time zone. Unrecognized IANA
+names throw a `RangeError`.
 
 ```ts
 const tokyo = { timeZone: "Asia/Tokyo" }
@@ -282,15 +295,14 @@ nextBusinessDay("2026-11-20", { ...tokyo, holidays: ["2026-11-23"] }).toISOStrin
 
 ## Date inputs
 
-- `YYYY-MM-DD` strings represent calendar dates as written in the selected time
-  zone. The runtime-local zone is used when no zone is specified.
-  Invalid dates such as `2026-02-30` throw a `TypeError`.
-- `Date` objects and Unix timestamps in milliseconds represent instants. The
-  functions use the instant's date in the selected time zone.
-- For strings with a time, use ISO 8601 with an explicit offset such as
-  `2026-05-12T09:00:00+09:00` to identify an instant. With an explicit
-  `timeZone`, date-time strings without an offset and other string formats
-  throw a `TypeError`. Without `timeZone`, they follow JavaScript's `Date` parsing.
+| Input | Interpretation |
+| --- | --- |
+| `"2026-11-24"` | The calendar date as written in the selected zone. |
+| A `Date`, a Unix timestamp in milliseconds, or `"2026-11-23T15:30:00Z"` | An instant. The functions use its calendar date in the selected zone. |
+| `"2026-11-24T00:30:00"` or other string formats | Follows JavaScript's `Date` parsing when `timeZone` is omitted. With an explicit `timeZone`, these inputs throw a `TypeError`. |
+
+An invalid calendar date such as `2026-02-30` throws a `TypeError`.
+When time matters, use ISO 8601 with `Z` or a numeric offset such as `+09:00`.
 
 ### Upgrading from 0.1
 
@@ -300,14 +312,8 @@ as `2026-05-12T00:00:00Z` to retain the 0.1 interpretation.
 
 ## Design policy
 
-`tiny-ja-date` is intentionally small.
-
-It does not:
-
-- include Japanese holiday data
-- format wareki
-- generate calendars
-- replace date-fns or dayjs
+`tiny-ja-date` focuses on Japanese date labels and business-day calculations.
+Supply organization-specific holidays through `holidays`.
 
 ---
 
@@ -320,6 +326,33 @@ Run `npm run build:demo` after changing the library source to refresh
 - npm → `https://www.npmjs.com/package/tiny-ja-date`
 - GitHub → `https://github.com/fusaihanabi/tiny-ja-date`
 - Official → `https://dl.fusai-hanabi.com`
+
+## Release checks
+
+With the development dependencies installed, run the tests. In PowerShell,
+the following checks both runtime-local behavior and explicit time zones
+using each of the three runtime defaults.
+
+```powershell
+foreach ($zone in @('Asia/Tokyo', 'America/Los_Angeles', 'Pacific/Apia')) {
+  $env:TZ = $zone
+  npm test -- --run
+  if ($LASTEXITCODE -ne 0) { throw "Tests failed in $zone" }
+}
+```
+
+Then rebuild the demo and verify the package.
+
+```bash
+npm run build:demo
+npm run check:package
+```
+
+`check:package` builds the library, creates a tarball with `npm pack`, and
+installs it offline in a temporary consumer project. It type-checks the
+consumer using Node-style ESM resolution, then runs the emitted JavaScript
+against the installed package. The check covers imports, exported types,
+and representative date and business-day examples.
 
 ---
 
