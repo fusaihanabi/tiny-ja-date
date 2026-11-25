@@ -62,6 +62,11 @@
       .result-label {
         min-width: 9.5rem;
       }
+
+      .result-list {
+        max-height: 14rem;
+        overflow-y: auto;
+      }
     </style>
   </head>
   <body>
@@ -320,8 +325,17 @@ formatRelativeJaDate(
             <div class="col-md-6">
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">listBusinessDays</h3>
+                  <p class="muted">出発日と到着日を含む期間内の営業日を、指定した方向順に返します。</p>
+                  <code>Date[]</code>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                   <h3 class="h5 fw-bold">createBusinessCalendar</h3>
-                  <p class="muted">タイムゾーンと休業日ルールを設定し、4つの営業日計算で使い回せます。</p>
+                  <p class="muted">タイムゾーンと休業日ルールを設定し、営業日計算で使い回せます。</p>
                   <code>BusinessCalendar</code>
                 </div>
               </div>
@@ -343,11 +357,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@0.8.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@0.9.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@0.8.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@0.9.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -355,7 +369,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.8.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@0.9.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -443,6 +457,22 @@ formatRelativeJaDate(
         `
       }
 
+      function businessDayListRow(from, to, { calendar, dateOptions }) {
+        const dates = calendar.listBusinessDays(from, to)
+        if (dates.length === 0) {
+          return resultRow("listBusinessDays", "期間内に営業日がありません。", "text-bg-secondary")
+        }
+
+        return `
+          <div class="border rounded-3 px-3 py-2">
+            <code class="result-label">listBusinessDays</code>
+            <ul class="result-list mt-2 mb-0 ps-4" tabindex="0" aria-label="営業日一覧">
+              ${dates.map((date) => `<li>${formatJaDate(date, dateOptions)}</li>`).join("")}
+            </ul>
+          </div>
+        `
+      }
+
       function businessDaysRow(date, { calendar, dateOptions, allDaysClosed }) {
         const amount = businessDaysInput.valueAsNumber
         if (!Number.isSafeInteger(amount)) {
@@ -489,6 +519,7 @@ formatRelativeJaDate(
             : resultRow("nextBusinessDay", "営業日がありません。", "text-bg-warning"),
           businessDaysRow(date, settings),
           resultRow("countBusinessDays", String(calendar.countBusinessDays(baseDate, date))),
+          businessDayListRow(baseDate, date, settings),
         ].join("")
       }
 

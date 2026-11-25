@@ -9,6 +9,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - 次の営業日計算
 - 営業日数の加算・減算
 - 2つの日付間の営業日数
+- 期間内の営業日一覧
 
 ## Install
 
@@ -178,10 +179,35 @@ countBusinessDays("2026-11-20", "2026-11-22", options) // 0
 countBusinessDays("2026-11-22", "2026-11-20", options) // -1
 ```
 
+### `listBusinessDays(from: DateInput, to: DateInput, options?: BusinessDayOptions): Date[]`
+
+Lists business days from `from` through `to`, including either endpoint when it
+is a business day. The dates appear in the requested direction. Equal endpoints
+return one date if it is a business day, or an empty array otherwise.
+
+Weekly closures, individual holidays, and dates skipped entirely by the time zone
+are excluded. Each `Date` represents the day's first valid time in the selected
+time zone. Each call returns a fresh array with fresh `Date` objects.
+
+```ts
+const options = {
+  timeZone: "Asia/Tokyo",
+  weekendDays: [0],
+  holidays: ["2026-11-23"],
+}
+
+listBusinessDays("2026-11-20", "2026-11-24", options)
+// Starts of November 20, 21, and 24 in Tokyo
+
+listBusinessDays("2026-11-24", "2026-11-20", options)
+// Starts of November 24, 21, and 20 in Tokyo
+```
+
 ### `createBusinessCalendar(options?: BusinessDayOptions): BusinessCalendar`
 
 Creates a reusable calendar with `isBusinessDay(date)`, `nextBusinessDay(date)`,
-`addBusinessDays(date, amount)`, and `countBusinessDays(from, to)` methods.
+`addBusinessDays(date, amount)`, `countBusinessDays(from, to)`, and
+`listBusinessDays(from, to)` methods.
 Each method follows the same rules as the standalone function. The factory
 validates the time zone, weekend days, and holidays when creating the calendar.
 Method arguments are validated on each call.
@@ -200,12 +226,14 @@ const calendar = createBusinessCalendar({
 
 calendar.isBusinessDay("2026-11-21") // true
 calendar.countBusinessDays("2026-11-20", "2026-11-24") // 2
+calendar.listBusinessDays("2026-11-20", "2026-11-24")
+// Starts of November 20, 21, and 24 in Tokyo
 ```
 
 ## Weekly closures
 
-`isBusinessDay`, `nextBusinessDay`, `addBusinessDays`, and `countBusinessDays`
-accept `weekendDays?: readonly number[]` in `BusinessDayOptions`. Use integers
+`isBusinessDay`, `nextBusinessDay`, `addBusinessDays`, `countBusinessDays`, and
+`listBusinessDays` accept `weekendDays?: readonly number[]` in `BusinessDayOptions`. Use integers
 from `0` (Sunday) through `6` (Saturday).
 
 - Omitting `weekendDays` closes Saturday and Sunday, equivalent to `[0, 6]`.
@@ -215,7 +243,8 @@ from `0` (Sunday) through `6` (Saturday).
   `RangeError`. A non-array value throws a `TypeError`. Validation also applies
   to zero-day moves and same-date counts.
 - Closing all seven days makes `isBusinessDay` return `false` and
-  `countBusinessDays` return `0`. `nextBusinessDay` and nonzero
+  `countBusinessDays` return `0`. `listBusinessDays` returns an empty array.
+  `nextBusinessDay` and nonzero
   `addBusinessDays` calls throw a `TypeError`. A zero-day move still returns the
   start of the input date.
 

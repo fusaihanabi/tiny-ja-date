@@ -7,6 +7,7 @@ import {
   formatRelativeJaDate,
   isBusinessDay,
   isWeekendJP,
+  listBusinessDays,
   nextBusinessDay,
 } from "../src"
 
@@ -393,6 +394,54 @@ describe("countBusinessDays", () => {
     for (const amount of [2, -2]) {
       expect(countBusinessDays(from, addBusinessDays(from, amount, tokyo), tokyo)).toBe(amount)
     }
+  })
+})
+
+describe("listBusinessDays", () => {
+  const options = { timeZone: "Asia/Tokyo", weekendDays: [0], holidays: ["2026-11-23"] }
+  const expected = [
+    new Date("2026-11-19T15:00:00Z"),
+    new Date("2026-11-20T15:00:00Z"),
+    new Date("2026-11-23T15:00:00Z"),
+  ]
+
+  it("includes both business-day endpoints and follows the requested direction", () => {
+    expect(listBusinessDays("2026-11-20", "2026-11-24", options)).toEqual(expected)
+    expect(listBusinessDays("2026-11-24", "2026-11-20", options)).toEqual([...expected].reverse())
+    expect(listBusinessDays("2026-11-22", "2026-11-24", options)).toEqual(expected.slice(2))
+  })
+
+  it("lists a single date only when it is a business day", () => {
+    expect(listBusinessDays("2026-11-21", "2026-11-20T15:30:00Z", options)).toEqual([expected[1]])
+    expect(listBusinessDays("2026-11-23", "2026-11-23", options)).toEqual([])
+    expect(listBusinessDays("2026-11-21", "2026-11-22")).toEqual([])
+    expect(listBusinessDays("2026-11-20", "2026-11-20")).toEqual([new Date(2026, 10, 20)])
+  })
+
+  it("returns an empty list when all weekdays are closed and still validates both dates", () => {
+    const closed = { weekendDays: [0, 1, 2, 3, 4, 5, 6] }
+    expect(listBusinessDays("2026-11-20", "2026-11-24", closed)).toEqual([])
+    expect(() => listBusinessDays("2026-02-30", "2026-11-24", closed)).toThrow(TypeError)
+    expect(() => listBusinessDays("2026-11-20", "2026-02-30", closed)).toThrow(TypeError)
+    expect(() => listBusinessDays("2026-11-21", "2026-11-22", { holidays: ["2026-02-30"] }))
+      .toThrow(TypeError)
+  })
+
+  it("uses the first valid time and skips dates that never occur", () => {
+    expect(listBusinessDays("1986-01-01", "1986-01-01", { timeZone: "Asia/Kathmandu" }))
+      .toEqual([new Date("1985-12-31T18:30:00Z")])
+    expect(listBusinessDays("2012-01-02", "2011-12-29", { timeZone: "Pacific/Apia" }))
+      .toEqual([new Date("2012-01-01T10:00:00Z"), new Date("2011-12-29T10:00:00Z")])
+  })
+
+  it("returns fresh dates and arrays from the reusable calendar", () => {
+    const calendar = createBusinessCalendar(options)
+    const days = calendar.listBusinessDays("2026-11-20", "2026-11-24")
+    expect(days).toEqual(expected)
+
+    days[0].setUTCDate(1)
+    days.pop()
+    expect(calendar.listBusinessDays("2026-11-20", "2026-11-24")).toEqual(expected)
   })
 })
 

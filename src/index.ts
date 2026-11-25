@@ -14,6 +14,7 @@ export interface BusinessCalendar {
   nextBusinessDay(input: DateInput): Date
   addBusinessDays(input: DateInput, amount: number): Date
   countBusinessDays(from: DateInput, to: DateInput): number
+  listBusinessDays(from: DateInput, to: DateInput): Date[]
 }
 
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"] as const
@@ -334,6 +335,30 @@ export function countBusinessDays(from: DateInput, to: DateInput, options: Busin
   return countBusinessDaysBetween(start, end, businessDayRules(options, formatter), formatter)
 }
 
+function listBusinessDaysBetween(
+  from: DateInput,
+  to: DateInput,
+  rules: BusinessDayRules,
+  formatter: Intl.DateTimeFormat | undefined,
+): Date[] {
+  const start = dateOnlyDay(from) ?? calendarDay(from, formatter)
+  const end = dateOnlyDay(to) ?? calendarDay(to, formatter)
+  if (rules.weekendDays.size === WEEKDAYS_JA.length) return []
+
+  const days: Date[] = []
+  const step = start <= end ? ONE_DAY_MS : -ONE_DAY_MS
+  for (let day = start; ; day += step) {
+    const businessDay = businessDayStart(day, rules, formatter)
+    if (businessDay) days.push(businessDay)
+    if (day === end) return days
+  }
+}
+
+export function listBusinessDays(from: DateInput, to: DateInput, options: BusinessDayOptions = {}): Date[] {
+  const formatter = createFormatter(options.timeZone)
+  return listBusinessDaysBetween(from, to, businessDayRules(options, formatter), formatter)
+}
+
 export function createBusinessCalendar(options: BusinessDayOptions = {}): BusinessCalendar {
   const formatter = createFormatter(options.timeZone)
   const rules = businessDayRules(options, formatter)
@@ -354,6 +379,9 @@ export function createBusinessCalendar(options: BusinessDayOptions = {}): Busine
       const start = dateOnlyDay(from) ?? calendarDay(from, formatter)
       const end = dateOnlyDay(to) ?? calendarDay(to, formatter)
       return countBusinessDaysBetween(start, end, rules, formatter)
+    },
+    listBusinessDays(from, to) {
+      return listBusinessDaysBetween(from, to, rules, formatter)
     },
   }
 }

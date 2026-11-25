@@ -264,6 +264,25 @@ export function countBusinessDays(from, to, options = {}) {
     const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
     return countBusinessDaysBetween(start, end, businessDayRules(options, formatter), formatter);
 }
+function listBusinessDaysBetween(from, to, rules, formatter) {
+    const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
+    const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
+    if (rules.weekendDays.size === WEEKDAYS_JA.length)
+        return [];
+    const days = [];
+    const step = start <= end ? ONE_DAY_MS : -ONE_DAY_MS;
+    for (let day = start;; day += step) {
+        const businessDay = businessDayStart(day, rules, formatter);
+        if (businessDay)
+            days.push(businessDay);
+        if (day === end)
+            return days;
+    }
+}
+export function listBusinessDays(from, to, options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    return listBusinessDaysBetween(from, to, businessDayRules(options, formatter), formatter);
+}
 export function createBusinessCalendar(options = {}) {
     const formatter = createFormatter(options.timeZone);
     const rules = businessDayRules(options, formatter);
@@ -283,6 +302,9 @@ export function createBusinessCalendar(options = {}) {
             const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
             const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
             return countBusinessDaysBetween(start, end, rules, formatter);
+        },
+        listBusinessDays(from, to) {
+            return listBusinessDaysBetween(from, to, rules, formatter);
         },
     };
 }
