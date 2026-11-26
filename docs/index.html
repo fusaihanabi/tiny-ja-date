@@ -303,6 +303,15 @@ formatRelativeJaDate(
             <div class="col-md-6">
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">countCalendarDays</h3>
+                  <p class="muted">土日や休業日も含め、基準日から指定日までの暦日数を返します。</p>
+                  <code>number</code>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                   <h3 class="h5 fw-bold">formatRelativeJaDate</h3>
                   <p class="muted">基準日から見た相対日付を日本語で返します。</p>
                   <code>今日</code> / <code>昨日</code> / <code>明日</code> / <code>3日前</code>
@@ -398,11 +407,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@1.5.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@1.6.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@1.5.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@1.6.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -410,7 +419,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.5.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.6.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -454,6 +463,7 @@ formatRelativeJaDate(
     <script src="https://unpkg.com/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     <script type="module">
       import {
+        countCalendarDays,
         createBusinessCalendar,
         formatIsoDate,
         formatJaDate,
@@ -499,6 +509,19 @@ formatRelativeJaDate(
             <span class="badge ${badgeClass} align-self-start align-self-md-center">${value}</span>
           </div>
         `
+      }
+
+      function dateResultRow(label, getValue) {
+        try {
+          const value = getValue()
+          if (typeof value === "boolean") {
+            return resultRow(label, String(value), value ? "text-bg-warning" : "text-bg-secondary")
+          }
+          return resultRow(label, value)
+        } catch (error) {
+          if (!(error instanceof TypeError)) throw error
+          return resultRow(label, "指定した地域に存在しない日付です。", "text-bg-warning")
+        }
       }
 
       function businessDayListRow(from, to, { calendar, dateOptions }) {
@@ -560,12 +583,12 @@ formatRelativeJaDate(
 
         const { calendar, dateOptions } = settings
         const businessDay = calendar.isBusinessDay(date)
-        const weekend = isWeekendJP(date, dateOptions)
 
         results.innerHTML = [
-          resultRow("formatJaDate", formatJaDate(date, dateOptions)),
-          resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate, dateOptions)),
-          resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
+          dateResultRow("formatJaDate", () => formatJaDate(date, dateOptions)),
+          dateResultRow("formatRelativeJaDate", () => formatRelativeJaDate(date, baseDate, dateOptions)),
+          resultRow("countCalendarDays", String(countCalendarDays(baseDate, date, dateOptions))),
+          dateResultRow("isWeekendJP", () => isWeekendJP(date, dateOptions)),
           resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
           businessDateRow("nextBusinessDay", dateOptions, () => calendar.nextBusinessDay(date), true),
           businessDaysRow(date, settings),

@@ -2,6 +2,7 @@ import {
   addBusinessDays,
   addCalendarDays,
   countBusinessDays,
+  countCalendarDays,
   createBusinessCalendar,
   formatIsoDate,
   formatJaDate,
@@ -67,4 +68,7 @@ expectEqual(formatIsoDate(searchStart, tokyo), "2026-11-21")
 const calendarDay: Date = addCalendarDays("2026-11-20", 1, tokyo)
 expectEqual(formatIsoDate(calendarDay, tokyo), "2026-11-21")
 expectEqual(formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo), "2025-12-31")
+const elapsedCalendarDays: number = countCalendarDays("2026-11-20", calendarDay, tokyo)
+expectEqual(elapsedCalendarDays, 1)
+expectEqual(countCalendarDays("2026-11-23", "2026-11-20", tokyo), -3)
 expectEqual(isBusinessDay("2026-11-21", { ...exceptionOptions, holidays: ["2026-11-21"] }), false)

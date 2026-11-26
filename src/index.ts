@@ -284,13 +284,25 @@ export function addCalendarDays(input: DateInput, amount: number, options: DateO
   return checkedDayStart(targetDay * ONE_DAY_MS, formatter)
 }
 
+function calendarDaysBetween(start: number, end: number): number {
+  return (end - start) / ONE_DAY_MS
+}
+
+export function countCalendarDays(from: DateInput, to: DateInput, options: DateOptions = {}): number {
+  const formatter = createFormatter(options.timeZone)
+  const start = dateOnlyDay(from) ?? calendarDay(from, formatter)
+  const end = dateOnlyDay(to) ?? calendarDay(to, formatter)
+  return calendarDaysBetween(start, end)
+}
+
 export function formatRelativeJaDate(
   input: DateInput,
   baseInput: DateInput = new Date(),
   options: DateOptions = {},
 ): string {
   const formatter = createFormatter(options.timeZone)
-  const diffDays = (calendarDay(input, formatter) - calendarDay(baseInput, formatter)) / ONE_DAY_MS
+  const day = calendarDay(input, formatter)
+  const diffDays = calendarDaysBetween(calendarDay(baseInput, formatter), day)
 
   if (diffDays === 0) return "今日"
   if (diffDays === -1) return "昨日"

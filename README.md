@@ -6,6 +6,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - `YYYY-MM-DD` 形式の日付表示
 - 指定日の開始時刻
 - 暦日数の加算・減算
+- 2つの日付間の暦日数
 - 日本語の相対日付表示
 - 土日判定
 - 営業日判定
@@ -23,7 +24,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.5.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.6.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -34,6 +35,7 @@ import {
   addBusinessDays,
   addCalendarDays,
   countBusinessDays,
+  countCalendarDays,
   createBusinessCalendar,
   formatIsoDate,
   formatJaDate,
@@ -150,6 +152,28 @@ formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo) // "2025-12-31"
 const apia = { timeZone: "Pacific/Apia" }
 formatIsoDate(addCalendarDays("2011-12-29", 2, apia), apia) // "2011-12-31"
 // An amount of 1 from December 29 throws a TypeError because December 30 was skipped.
+```
+
+### `countCalendarDays(from: DateInput, to: DateInput, options?: DateOptions): number`
+
+Returns the difference between two calendar dates in the selected time zone,
+defaulting to the runtime's local zone. The result is positive when `to` is
+later, negative when it is earlier, and zero for the same calendar date.
+
+Weekends, holidays, and dates skipped entirely by the time zone still count.
+A date-only string can identify a skipped date at either endpoint. Daylight
+saving changes do not affect the calendar count. Invalid dates throw a
+`TypeError`, and an unrecognized time zone throws a `RangeError`.
+
+```ts
+const tokyo = { timeZone: "Asia/Tokyo" }
+
+countCalendarDays("2026-11-20", "2026-11-23", tokyo) // 3
+countCalendarDays("2026-11-23", "2026-11-20", tokyo) // -3
+countCalendarDays("2026-11-21", "2026-11-20T15:30:00Z", tokyo) // 0
+
+const apia = { timeZone: "Pacific/Apia" }
+countCalendarDays("2011-12-29", "2011-12-31", apia) // 2
 ```
 
 ### `formatRelativeJaDate(date: DateInput, baseDate?: DateInput, options?: DateOptions): string`

@@ -225,9 +225,19 @@ export function addCalendarDays(input, amount, options = {}) {
         throw new TypeError("Invalid date");
     return checkedDayStart(targetDay * ONE_DAY_MS, formatter);
 }
+function calendarDaysBetween(start, end) {
+    return (end - start) / ONE_DAY_MS;
+}
+export function countCalendarDays(from, to, options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
+    const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
+    return calendarDaysBetween(start, end);
+}
 export function formatRelativeJaDate(input, baseInput = new Date(), options = {}) {
     const formatter = createFormatter(options.timeZone);
-    const diffDays = (calendarDay(input, formatter) - calendarDay(baseInput, formatter)) / ONE_DAY_MS;
+    const day = calendarDay(input, formatter);
+    const diffDays = calendarDaysBetween(calendarDay(baseInput, formatter), day);
     if (diffDays === 0)
         return "今日";
     if (diffDays === -1)

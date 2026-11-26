@@ -3,6 +3,7 @@ import {
   addBusinessDays,
   addCalendarDays,
   countBusinessDays,
+  countCalendarDays,
   createBusinessCalendar,
   formatIsoDate,
   formatJaDate,
@@ -270,6 +271,60 @@ describe("timeZone", () => {
       ...tokyo,
       holidays: ["2026-11-23T00:00:00"],
     })).toThrow(TypeError)
+  })
+})
+
+describe("countCalendarDays", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+
+  it("counts all calendar dates and returns a signed result", () => {
+    expect(countCalendarDays("2026-11-20", "2026-11-23", tokyo)).toBe(3)
+    expect(countCalendarDays("2026-11-23", "2026-11-20", tokyo)).toBe(-3)
+    expect(countCalendarDays("2026-11-21", "2026-11-21", tokyo)).toBe(0)
+  })
+
+  it("uses the selected zone for instants and defaults to the runtime's local zone", () => {
+    const instant = new Date("2026-11-20T15:30:00Z")
+    expect(countCalendarDays("2026-11-21", instant, tokyo)).toBe(0)
+    expect(countCalendarDays("2026-11-21", instant.getTime(), { timeZone: "America/Los_Angeles" }))
+      .toBe(-1)
+    expect(countCalendarDays(new Date(2026, 10, 21, 23, 30), "2026-11-22T00:30:00")).toBe(1)
+  })
+
+  it("counts across month and year boundaries, including a leap day", () => {
+    expect(countCalendarDays("2024-02-28", "2024-03-01", tokyo)).toBe(2)
+    expect(countCalendarDays("2026-01-01", "2025-12-31", tokyo)).toBe(-1)
+  })
+
+  it("counts one day across both daylight saving transitions", () => {
+    const options = { timeZone: "America/Los_Angeles" }
+    expect(countCalendarDays("2026-03-08T08:00:00Z", "2026-03-09T07:00:00Z", options)).toBe(1)
+    expect(countCalendarDays("2026-11-01T07:00:00Z", "2026-11-02T08:00:00Z", options)).toBe(1)
+  })
+
+  it("allows skipped dates anywhere in the calendar range", () => {
+    const apia = { timeZone: "Pacific/Apia" }
+    expect(countCalendarDays("2011-12-29", "2011-12-31", apia)).toBe(2)
+    expect(countCalendarDays("2011-12-29", "2011-12-30", apia)).toBe(1)
+    expect(countCalendarDays("2011-12-30", "2011-12-29", apia)).toBe(-1)
+    expect(countCalendarDays("2011-12-30", "2011-12-30", apia)).toBe(0)
+  })
+
+  it("recovers amounts passed to addCalendarDays for valid destinations", () => {
+    const from = "2026-11-20T15:30:00Z"
+    for (const amount of [-4, 0, 3]) {
+      expect(countCalendarDays(from, addCalendarDays(from, amount, tokyo), tokyo)).toBe(amount)
+    }
+    const apia = { timeZone: "Pacific/Apia" }
+    expect(countCalendarDays("2011-12-29", addCalendarDays("2011-12-29", 2, apia), apia)).toBe(2)
+  })
+
+  it("validates both dates and the time zone", () => {
+    expect(() => countCalendarDays("2026-02-30", "2026-02-28", tokyo)).toThrow(TypeError)
+    expect(() => countCalendarDays("2026-02-28", NaN, tokyo)).toThrow(TypeError)
+    expect(() => countCalendarDays("2026-02-28", "2026-03-01T00:00:00", tokyo)).toThrow(TypeError)
+    expect(() => countCalendarDays("2026-02-28", "2026-02-28", { timeZone: "Invalid/Zone" }))
+      .toThrow(RangeError)
   })
 })
 
