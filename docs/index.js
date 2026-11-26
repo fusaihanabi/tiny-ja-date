@@ -182,6 +182,12 @@ function dayStart(day, formatter) {
     local.setFullYear(year, month - 1, dayOfMonth);
     return local.getDate() === dayOfMonth ? local : undefined;
 }
+function checkedDayStart(day, formatter) {
+    const start = dayStart(day, formatter);
+    if (!start)
+        throw new TypeError("Invalid date");
+    return start;
+}
 function businessDayStart(candidate, rules, formatter) {
     if (rules.holidays.has(candidate))
         return undefined;
@@ -202,6 +208,10 @@ export function formatIsoDate(input, options = {}) {
     if (year < 0 || year > 9999)
         throw new RangeError("Expected a year from 0000 to 9999");
     return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+export function startOfDay(input, options = {}) {
+    const formatter = createFormatter(options.timeZone);
+    return checkedDayStart(calendarDay(input, formatter), formatter);
 }
 export function formatRelativeJaDate(input, baseInput = new Date(), options = {}) {
     const formatter = createFormatter(options.timeZone);
@@ -232,10 +242,7 @@ function validateBusinessDayAmount(amount) {
 }
 function moveBusinessDays(day, amount, rules, formatter) {
     if (amount === 0) {
-        const start = dayStart(day, formatter);
-        if (!start)
-            throw new TypeError("Invalid date");
-        return start;
+        return checkedDayStart(day, formatter);
     }
     if (rules.weekendDays.size === WEEKDAYS_JA.length && rules.workingDates.size === 0) {
         throw new TypeError("No business days");

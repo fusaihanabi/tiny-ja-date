@@ -11,6 +11,7 @@ import {
   iterateBusinessDays,
   listBusinessDays,
   nextBusinessDay,
+  startOfDay,
 } from "../src"
 
 describe("createBusinessCalendar", () => {
@@ -268,6 +269,50 @@ describe("timeZone", () => {
       ...tokyo,
       holidays: ["2026-11-23T00:00:00"],
     })).toThrow(TypeError)
+  })
+})
+
+describe("startOfDay", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+
+  it("finds the start of the calendar day in the selected time zone", () => {
+    const instant = new Date("2026-11-20T15:30:00Z")
+    expect(startOfDay(instant, tokyo).toISOString()).toBe("2026-11-20T15:00:00.000Z")
+    expect(startOfDay(instant.getTime(), { timeZone: "America/Los_Angeles" }).toISOString())
+      .toBe("2026-11-20T08:00:00.000Z")
+    expect(instant.toISOString()).toBe("2026-11-20T15:30:00.000Z")
+  })
+
+  it("uses the runtime's local time zone when omitted", () => {
+    const expected = new Date(2026, 10, 21)
+    expect(startOfDay(new Date(2026, 10, 21, 18, 30))).toEqual(expected)
+    expect(startOfDay("2026-11-21")).toEqual(expected)
+  })
+
+  it("matches a zero-day business move on weekends and holidays", () => {
+    const options = { ...tokyo, holidays: ["2026-11-23"] }
+    expect(startOfDay("2026-11-21", tokyo)).toEqual(addBusinessDays("2026-11-21", 0, options))
+    expect(startOfDay("2026-11-23", tokyo)).toEqual(addBusinessDays("2026-11-23", 0, options))
+  })
+
+  it("returns the first valid time when midnight is skipped", () => {
+    const options = { timeZone: "Asia/Kathmandu" }
+    expect(startOfDay("1986-01-01", options).toISOString()).toBe("1985-12-31T18:30:00.000Z")
+    expect(startOfDay("1986-01-01", options)).toEqual(addBusinessDays("1986-01-01", 0, options))
+  })
+
+  it("returns the earlier instant when midnight occurs twice", () => {
+    const options = { timeZone: "America/Havana" }
+    expect(startOfDay("2026-11-01", options).toISOString()).toBe("2026-11-01T04:00:00.000Z")
+    expect(startOfDay("2026-11-01T00:00:00-05:00", options).toISOString())
+      .toBe("2026-11-01T04:00:00.000Z")
+  })
+
+  it("rejects skipped days, invalid inputs, and invalid zones", () => {
+    expect(() => startOfDay("2011-12-30", { timeZone: "Pacific/Apia" })).toThrow(TypeError)
+    expect(() => startOfDay("2026-02-30", tokyo)).toThrow(TypeError)
+    expect(() => startOfDay("2026-11-21T15:30:00", tokyo)).toThrow(TypeError)
+    expect(() => startOfDay("2026-11-21", { timeZone: "Invalid/Zone" })).toThrow(RangeError)
   })
 })
 

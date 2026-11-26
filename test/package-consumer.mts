@@ -10,6 +10,7 @@ import {
   iterateBusinessDays,
   listBusinessDays,
   nextBusinessDay,
+  startOfDay,
   type BusinessCalendar,
   type BusinessDayOptions,
   type DateInput,
@@ -57,4 +58,8 @@ expectEqual(next.toISOString(), "2026-11-20T15:00:00.000Z")
 const isoDate: string = formatIsoDate(next, tokyo)
 expectEqual(isoDate, "2026-11-21")
 expectEqual(formatIsoDate(next, { timeZone: "America/Los_Angeles" }), "2026-11-20")
+
+const searchStart: Date = startOfDay("2026-11-21", tokyo)
+expectEqual(searchStart.toISOString(), "2026-11-20T15:00:00.000Z")
+expectEqual(formatIsoDate(searchStart, tokyo), "2026-11-21")
 expectEqual(isBusinessDay("2026-11-21", { ...exceptionOptions, holidays: ["2026-11-21"] }), false)

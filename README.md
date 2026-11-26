@@ -4,6 +4,7 @@ Tiny TypeScript date utilities for Japanese UI.
 
 - 日本語の日付表示
 - `YYYY-MM-DD` 形式の日付表示
+- 指定日の開始時刻
 - 日本語の相対日付表示
 - 土日判定
 - 営業日判定
@@ -21,7 +22,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.3.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.4.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -39,6 +40,7 @@ import {
   isWeekendJP,
   listBusinessDays,
   nextBusinessDay,
+  startOfDay,
 } from "tiny-ja-date"
 
 formatJaDate(new Date(2026, 4, 12))
@@ -102,6 +104,26 @@ const next = nextBusinessDay("2026-11-20", {
 formatIsoDate(next, tokyo) // "2026-11-21"
 formatIsoDate(next, { timeZone: "America/Los_Angeles" }) // "2026-11-20"
 next.toISOString() // "2026-11-20T15:00:00.000Z"
+```
+
+### `startOfDay(date: DateInput, options?: DateOptions): Date`
+
+Returns a `Date` for the first valid time on the selected calendar date,
+including weekends and holidays. It accepts the same inputs as `formatIsoDate`
+and defaults to the runtime's local time zone. When midnight is skipped, it
+uses the first valid time that day. When midnight occurs twice, it uses the
+earlier instant.
+
+An invalid or entirely skipped date throws a `TypeError`. An unrecognized
+time zone throws a `RangeError`.
+
+```ts
+const tokyo = { timeZone: "Asia/Tokyo" }
+const selectedDate = "2026-11-21" // e.g. an HTML date input's value
+const searchStart = startOfDay(selectedDate, tokyo)
+
+searchStart.toISOString() // "2026-11-20T15:00:00.000Z"
+formatIsoDate(searchStart, tokyo) // "2026-11-21"
 ```
 
 ### `formatRelativeJaDate(date: DateInput, baseDate?: DateInput, options?: DateOptions): string`
@@ -180,6 +202,7 @@ starts the day after or before the input and applies the
 `addBusinessDays(date, 1, options)` is equivalent to `nextBusinessDay(date, options)`.
 
 Zero returns the start of the input date, including a weekend or holiday.
+It matches `startOfDay(date, { timeZone })` with the same time zone.
 When midnight is skipped, the result is the first valid time on that date.
 If the entire input date is skipped, zero throws a `TypeError`. Calendar options
 are validated for every amount, including zero. An amount that is not a safe

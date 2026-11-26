@@ -233,6 +233,12 @@ function dayStart(day: number, formatter: Intl.DateTimeFormat | undefined): Date
   return local.getDate() === dayOfMonth ? local : undefined
 }
 
+function checkedDayStart(day: number, formatter: Intl.DateTimeFormat | undefined): Date {
+  const start = dayStart(day, formatter)
+  if (!start) throw new TypeError("Invalid date")
+  return start
+}
+
 function businessDayStart(
   candidate: number,
   rules: BusinessDayRules,
@@ -258,6 +264,11 @@ export function formatIsoDate(input: DateInput, options: DateOptions = {}): stri
   if (year < 0 || year > 9999) throw new RangeError("Expected a year from 0000 to 9999")
 
   return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
+export function startOfDay(input: DateInput, options: DateOptions = {}): Date {
+  const formatter = createFormatter(options.timeZone)
+  return checkedDayStart(calendarDay(input, formatter), formatter)
 }
 
 export function formatRelativeJaDate(
@@ -299,9 +310,7 @@ function moveBusinessDays(
   formatter: Intl.DateTimeFormat | undefined,
 ): Date {
   if (amount === 0) {
-    const start = dayStart(day, formatter)
-    if (!start) throw new TypeError("Invalid date")
-    return start
+    return checkedDayStart(day, formatter)
   }
 
   if (rules.weekendDays.size === WEEKDAYS_JA.length && rules.workingDates.size === 0) {
