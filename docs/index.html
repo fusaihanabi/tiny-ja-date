@@ -303,6 +303,15 @@ formatRelativeJaDate(
             <div class="col-md-6">
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">addCalendarMonths</h3>
+                  <p class="muted">暦月を前後に移動し、同じ日番号がなければ月末を使います。</p>
+                  <code>Date</code>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                   <h3 class="h5 fw-bold">countCalendarDays</h3>
                   <p class="muted">土日や休業日も含め、基準日から指定日までの暦日数を返します。</p>
                   <code>number</code>
@@ -407,11 +416,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@1.6.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@1.7.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@1.6.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@1.7.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -419,7 +428,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.6.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.7.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>

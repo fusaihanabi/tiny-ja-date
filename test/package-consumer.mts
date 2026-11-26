@@ -1,6 +1,7 @@
 import {
   addBusinessDays,
   addCalendarDays,
+  addCalendarMonths,
   countBusinessDays,
   countCalendarDays,
   createBusinessCalendar,
@@ -71,4 +72,7 @@ expectEqual(formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo), "202
 const elapsedCalendarDays: number = countCalendarDays("2026-11-20", calendarDay, tokyo)
 expectEqual(elapsedCalendarDays, 1)
 expectEqual(countCalendarDays("2026-11-23", "2026-11-20", tokyo), -3)
+const nextBillingDate: Date = addCalendarMonths("2026-01-31", 1, tokyo)
+expectEqual(formatIsoDate(nextBillingDate, tokyo), "2026-02-28")
+expectEqual(formatIsoDate(addCalendarMonths("2026-01-31", 2, tokyo), tokyo), "2026-03-31")
 expectEqual(isBusinessDay("2026-11-21", { ...exceptionOptions, holidays: ["2026-11-21"] }), false)

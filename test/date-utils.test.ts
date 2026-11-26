@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   addBusinessDays,
   addCalendarDays,
+  addCalendarMonths,
   countBusinessDays,
   countCalendarDays,
   createBusinessCalendar,
@@ -271,6 +272,69 @@ describe("timeZone", () => {
       ...tokyo,
       holidays: ["2026-11-23T00:00:00"],
     })).toThrow(TypeError)
+  })
+})
+
+describe("addCalendarMonths", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+  const utc = { timeZone: "UTC" }
+
+  it("uses the original day when possible and clamps to the destination month end", () => {
+    const february = addCalendarMonths("2026-01-31", 1, tokyo)
+    expect(formatIsoDate(february, tokyo)).toBe("2026-02-28")
+    expect(formatIsoDate(addCalendarMonths("2026-01-31", 2, tokyo), tokyo)).toBe("2026-03-31")
+    expect(formatIsoDate(addCalendarMonths(february, 1, tokyo), tokyo)).toBe("2026-03-28")
+    expect(formatIsoDate(addCalendarMonths("2024-03-31", -1, tokyo), tokyo)).toBe("2024-02-29")
+    expect(formatIsoDate(addCalendarMonths("2026-05-31", 1, tokyo), tokyo)).toBe("2026-06-30")
+  })
+
+  it("moves across years in both directions", () => {
+    expect(formatIsoDate(addCalendarMonths("2026-01-13", -1, tokyo), tokyo)).toBe("2025-12-13")
+    expect(formatIsoDate(addCalendarMonths("2026-12-31", 2, tokyo), tokyo)).toBe("2027-02-28")
+    expect(addCalendarMonths("0000-01-31", -1, utc).toISOString()).toBe("-000001-12-31T00:00:00.000Z")
+  })
+
+  it("uses the selected zone to find the input date and the destination's start", () => {
+    const input = new Date("2026-03-30T15:30:00Z")
+    const losAngeles = { timeZone: "America/Los_Angeles" }
+    expect(formatIsoDate(addCalendarMonths(input, 2, tokyo), tokyo)).toBe("2026-05-31")
+    expect(formatIsoDate(addCalendarMonths(input.getTime(), 2, losAngeles), losAngeles)).toBe("2026-05-30")
+    expect(addCalendarMonths("2026-02-09T00:00:00-08:00", 1, losAngeles).toISOString())
+      .toBe("2026-03-09T07:00:00.000Z")
+  })
+
+  it("matches startOfDay for zero and uses the local zone when omitted", () => {
+    const input = new Date(2026, 0, 31, 18, 30)
+    expect(addCalendarMonths(input, 0, tokyo)).toEqual(startOfDay(input, tokyo))
+    expect(addCalendarMonths(input, -0)).toEqual(startOfDay(input))
+    expect(addCalendarMonths(input, 1)).toEqual(new Date(2026, 1, 28))
+  })
+
+  it("uses the first valid time when the destination midnight is missing or repeated", () => {
+    expect(addCalendarMonths("1985-12-01", 1, { timeZone: "Asia/Kathmandu" }).toISOString())
+      .toBe("1985-12-31T18:30:00.000Z")
+    expect(addCalendarMonths("2026-10-01", 1, { timeZone: "America/Havana" }).toISOString())
+      .toBe("2026-11-01T04:00:00.000Z")
+  })
+
+  it("rejects skipped destinations and can use a skipped date as a nonzero reference", () => {
+    const apia = { timeZone: "Pacific/Apia" }
+    expect(() => addCalendarMonths("2011-11-30", 1, apia)).toThrow(TypeError)
+    expect(() => addCalendarMonths("2012-01-30", -1, apia)).toThrow(TypeError)
+    expect(formatIsoDate(addCalendarMonths("2011-12-30", 1, apia), apia)).toBe("2012-01-30")
+    expect(() => addCalendarMonths("2011-12-30", 0, apia)).toThrow(TypeError)
+  })
+
+  it("validates the amount, date, time zone, and Date range", () => {
+    for (const amount of [0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => addCalendarMonths("2026-01-31", amount, tokyo)).toThrow(RangeError)
+    }
+    const limit = 8_640_000_000_000_000
+    expect(() => addCalendarMonths(limit, 1, utc)).toThrow(TypeError)
+    expect(() => addCalendarMonths(-limit, -1, utc)).toThrow(TypeError)
+    expect(() => addCalendarMonths("2026-01-31", Number.MAX_SAFE_INTEGER, utc)).toThrow(TypeError)
+    expect(() => addCalendarMonths("2026-02-30", 1, tokyo)).toThrow(TypeError)
+    expect(() => addCalendarMonths("2026-01-31", 1, { timeZone: "Invalid/Zone" })).toThrow(RangeError)
   })
 })
 

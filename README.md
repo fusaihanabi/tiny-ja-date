@@ -6,6 +6,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - `YYYY-MM-DD` 形式の日付表示
 - 指定日の開始時刻
 - 暦日数の加算・減算
+- 暦月数の加算・減算
 - 2つの日付間の暦日数
 - 日本語の相対日付表示
 - 土日判定
@@ -24,7 +25,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.6.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.7.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -34,6 +35,7 @@ and TypeScript 5.9.3. Time zone calculations use the runtime's
 import {
   addBusinessDays,
   addCalendarDays,
+  addCalendarMonths,
   countBusinessDays,
   countCalendarDays,
   createBusinessCalendar,
@@ -152,6 +154,29 @@ formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo) // "2025-12-31"
 const apia = { timeZone: "Pacific/Apia" }
 formatIsoDate(addCalendarDays("2011-12-29", 2, apia), apia) // "2011-12-31"
 // An amount of 1 from December 29 throws a TypeError because December 30 was skipped.
+```
+
+### `addCalendarMonths(date: DateInput, amount: number, options?: DateOptions): Date`
+
+Moves forward or backward by whole calendar months in the selected time
+zone, using the same date inputs and time zone rules as `addCalendarDays`.
+It keeps the original day of the month when possible and uses the last date
+of the destination month otherwise. Zero is equivalent to `startOfDay(date, options)`.
+
+The result is the first valid time on the destination date. A skipped
+destination or a result outside the `Date` range throws a `TypeError`.
+A month amount that is not a safe integer throws a `RangeError`.
+
+For a recurring billing date, apply the total month offset to the original
+billing date each time.
+
+```ts
+const tokyo = { timeZone: "Asia/Tokyo" }
+const billingDate = "2026-01-31"
+
+formatIsoDate(addCalendarMonths(billingDate, 1, tokyo), tokyo) // "2026-02-28"
+formatIsoDate(addCalendarMonths(billingDate, 2, tokyo), tokyo) // "2026-03-31"
+formatIsoDate(addCalendarMonths("2024-03-31", -1, tokyo), tokyo) // "2024-02-29"
 ```
 
 ### `countCalendarDays(from: DateInput, to: DateInput, options?: DateOptions): number`

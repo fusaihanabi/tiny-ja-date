@@ -225,6 +225,22 @@ export function addCalendarDays(input, amount, options = {}) {
         throw new TypeError("Invalid date");
     return checkedDayStart(targetDay * ONE_DAY_MS, formatter);
 }
+export function addCalendarMonths(input, amount, options = {}) {
+    if (!Number.isSafeInteger(amount))
+        throw new RangeError("Expected a safe integer calendar-month amount");
+    if (amount === 0)
+        return startOfDay(input, options);
+    const formatter = createFormatter(options.timeZone);
+    const { year, month, day } = utcDateParts(dateOnlyDay(input) ?? calendarDay(input, formatter));
+    const monthIndex = year * 12 + month - 1 + amount;
+    const targetYear = Math.floor(monthIndex / 12);
+    const targetMonth = monthIndex - targetYear * 12 + 1;
+    const monthEnd = utcDay(targetYear, targetMonth + 1, 0);
+    const target = Math.min(utcDay(targetYear, targetMonth, day), monthEnd);
+    if (!Number.isSafeInteger(target) || Math.abs(target) > MAX_CALENDAR_DAY_MS)
+        throw new TypeError("Invalid date");
+    return checkedDayStart(target, formatter);
+}
 function calendarDaysBetween(start, end) {
     return (end - start) / ONE_DAY_MS;
 }
