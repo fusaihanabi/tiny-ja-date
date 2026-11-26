@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import {
   addBusinessDays,
+  addCalendarDays,
   countBusinessDays,
   createBusinessCalendar,
   formatIsoDate,
@@ -269,6 +270,65 @@ describe("timeZone", () => {
       ...tokyo,
       holidays: ["2026-11-23T00:00:00"],
     })).toThrow(TypeError)
+  })
+})
+
+describe("addCalendarDays", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+
+  it("moves in either direction across weekends and month or year boundaries", () => {
+    expect(formatIsoDate(addCalendarDays("2026-11-20", 1, tokyo), tokyo)).toBe("2026-11-21")
+    expect(formatIsoDate(addCalendarDays("2026-11-23", -1, tokyo), tokyo)).toBe("2026-11-22")
+    expect(formatIsoDate(addCalendarDays("2024-02-28", 1, tokyo), tokyo)).toBe("2024-02-29")
+    expect(formatIsoDate(addCalendarDays("2024-02-28", 2, tokyo), tokyo)).toBe("2024-03-01")
+    expect(formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo)).toBe("2025-12-31")
+  })
+
+  it("uses the selected zone for the input instant and for the next day across daylight saving", () => {
+    const options = { timeZone: "America/Los_Angeles" }
+    const input = new Date("2026-03-08T08:00:00Z")
+    expect(addCalendarDays(input, 1, options).toISOString()).toBe("2026-03-09T07:00:00.000Z")
+    expect(addCalendarDays(input, 1, options).getTime() - input.getTime()).toBe(23 * 60 * 60 * 1000)
+    expect(addCalendarDays("2026-03-09T00:00:00-07:00", -1, options)).toEqual(input)
+    expect(addCalendarDays(input.getTime(), 1, options).toISOString()).toBe("2026-03-09T07:00:00.000Z")
+  })
+
+  it("matches startOfDay for zero and uses the runtime's local zone when omitted", () => {
+    const input = new Date(2026, 10, 21, 18, 30)
+    expect(addCalendarDays(input, 0, tokyo)).toEqual(startOfDay(input, tokyo))
+    expect(addCalendarDays(input, -0)).toEqual(startOfDay(input))
+    expect(addCalendarDays(input, 1)).toEqual(new Date(2026, 10, 22))
+  })
+
+  it("uses the first valid time when the target midnight is missing or repeated", () => {
+    expect(addCalendarDays("1985-12-31", 1, { timeZone: "Asia/Kathmandu" }).toISOString())
+      .toBe("1985-12-31T18:30:00.000Z")
+    expect(addCalendarDays("2026-10-31", 1, { timeZone: "America/Havana" }).toISOString())
+      .toBe("2026-11-01T04:00:00.000Z")
+  })
+
+  it("counts skipped dates and rejects a skipped destination", () => {
+    const options = { timeZone: "Pacific/Apia" }
+    expect(() => addCalendarDays("2011-12-29", 1, options)).toThrow(TypeError)
+    expect(() => addCalendarDays("2011-12-31", -1, options)).toThrow(TypeError)
+    expect(formatIsoDate(addCalendarDays("2011-12-29", 2, options), options)).toBe("2011-12-31")
+    expect(formatIsoDate(addCalendarDays("2011-12-30", 1, options), options)).toBe("2011-12-31")
+    expect(() => addCalendarDays("2011-12-30", 0, options)).toThrow(TypeError)
+  })
+
+  it("validates the amount, date, time zone, and Date range", () => {
+    for (const amount of [0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => addCalendarDays("2026-11-20", amount, tokyo)).toThrow(RangeError)
+    }
+    const limit = 8_640_000_000_000_000
+    const utc = { timeZone: "UTC" }
+    expect(() => addCalendarDays(limit, 1, utc)).toThrow(TypeError)
+    expect(() => addCalendarDays(-limit, -1, utc)).toThrow(TypeError)
+    expect(() => addCalendarDays(-limit + 86_400_000, -1, { timeZone: "America/Los_Angeles" }))
+      .toThrow(TypeError)
+    expect(() => addCalendarDays("2026-11-20", Number.MAX_SAFE_INTEGER, utc)).toThrow(TypeError)
+    expect(() => addCalendarDays("2026-02-30", 1, tokyo)).toThrow(TypeError)
+    expect(() => addCalendarDays("2026-11-20", 1, { timeZone: "Invalid/Zone" })).toThrow(RangeError)
   })
 })
 

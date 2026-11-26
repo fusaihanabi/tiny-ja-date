@@ -1,5 +1,6 @@
 import {
   addBusinessDays,
+  addCalendarDays,
   countBusinessDays,
   createBusinessCalendar,
   formatIsoDate,
@@ -62,4 +63,8 @@ expectEqual(formatIsoDate(next, { timeZone: "America/Los_Angeles" }), "2026-11-2
 const searchStart: Date = startOfDay("2026-11-21", tokyo)
 expectEqual(searchStart.toISOString(), "2026-11-20T15:00:00.000Z")
 expectEqual(formatIsoDate(searchStart, tokyo), "2026-11-21")
+
+const calendarDay: Date = addCalendarDays("2026-11-20", 1, tokyo)
+expectEqual(formatIsoDate(calendarDay, tokyo), "2026-11-21")
+expectEqual(formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo), "2025-12-31")
 expectEqual(isBusinessDay("2026-11-21", { ...exceptionOptions, holidays: ["2026-11-21"] }), false)

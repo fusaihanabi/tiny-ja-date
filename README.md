@@ -5,6 +5,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - 日本語の日付表示
 - `YYYY-MM-DD` 形式の日付表示
 - 指定日の開始時刻
+- 暦日数の加算・減算
 - 日本語の相対日付表示
 - 土日判定
 - 営業日判定
@@ -22,7 +23,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.4.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.5.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -31,6 +32,7 @@ and TypeScript 5.9.3. Time zone calculations use the runtime's
 ```ts
 import {
   addBusinessDays,
+  addCalendarDays,
   countBusinessDays,
   createBusinessCalendar,
   formatIsoDate,
@@ -124,6 +126,30 @@ const searchStart = startOfDay(selectedDate, tokyo)
 
 searchStart.toISOString() // "2026-11-20T15:00:00.000Z"
 formatIsoDate(searchStart, tokyo) // "2026-11-21"
+```
+
+### `addCalendarDays(date: DateInput, amount: number, options?: DateOptions): Date`
+
+Moves forward for a positive amount and backward for a negative amount,
+counting calendar dates in the selected time zone, including weekends and
+holidays. The result is the first valid time on the destination date.
+When midnight occurs twice, the earlier instant is used.
+Passing zero is equivalent to `startOfDay(date, options)`.
+
+A day skipped entirely by the time zone still occupies a position in the
+calendar. A date-only string for such a day can serve as a reference for a
+nonzero move. A skipped destination or result outside the `Date` range throws
+a `TypeError`. An amount that is not a safe integer throws a `RangeError`.
+
+```ts
+const tokyo = { timeZone: "Asia/Tokyo" }
+
+formatIsoDate(addCalendarDays("2026-11-20", 1, tokyo), tokyo) // "2026-11-21" (Saturday)
+formatIsoDate(addCalendarDays("2026-01-01", -1, tokyo), tokyo) // "2025-12-31"
+
+const apia = { timeZone: "Pacific/Apia" }
+formatIsoDate(addCalendarDays("2011-12-29", 2, apia), apia) // "2011-12-31"
+// An amount of 1 from December 29 throws a TypeError because December 30 was skipped.
 ```
 
 ### `formatRelativeJaDate(date: DateInput, baseDate?: DateInput, options?: DateOptions): string`

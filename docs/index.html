@@ -294,6 +294,15 @@ formatRelativeJaDate(
             <div class="col-md-6">
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">addCalendarDays</h3>
+                  <p class="muted">土日も含めて暦日を前後に数え、移動先の日の始まりを返します。</p>
+                  <code>Date</code>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                   <h3 class="h5 fw-bold">formatRelativeJaDate</h3>
                   <p class="muted">基準日から見た相対日付を日本語で返します。</p>
                   <code>今日</code> / <code>昨日</code> / <code>明日</code> / <code>3日前</code>
@@ -389,11 +398,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@1.4.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@1.5.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@1.4.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@1.5.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -401,7 +410,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.4.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.5.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>

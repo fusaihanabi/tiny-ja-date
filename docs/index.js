@@ -2,6 +2,8 @@ const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
 const DEFAULT_WEEKEND_DAYS = new Set([0, 6]);
 const ONE_DAY_MS = 86400000;
 const MAX_DATE_MS = 8640000000000000;
+// A local calendar date can extend one day beyond the UTC Date limits.
+const MAX_CALENDAR_DAY_MS = MAX_DATE_MS + ONE_DAY_MS;
 const GREGORIAN_CYCLE_MS = 146097 * ONE_DAY_MS;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const OFFSET_DATE_TIME = /^((?:\d{4}|[+-]\d{6}))-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
@@ -104,8 +106,6 @@ function zonedDayStart(day, formatter) {
     let earliest = Infinity;
     let previous = first;
     let previousWall = wallTime(first, formatter);
-    if (previousWall >= day && previousWall < day + ONE_DAY_MS)
-        earliest = first;
     // Inspect offsets on both sides of midnight to handle repeated wall times.
     for (let instant = first;; instant = Math.min(instant + ONE_DAY_MS / 4, last)) {
         const wall = wallTime(instant, formatter);
@@ -213,6 +213,18 @@ export function startOfDay(input, options = {}) {
     const formatter = createFormatter(options.timeZone);
     return checkedDayStart(calendarDay(input, formatter), formatter);
 }
+export function addCalendarDays(input, amount, options = {}) {
+    if (!Number.isSafeInteger(amount))
+        throw new RangeError("Expected a safe integer calendar-day amount");
+    if (amount === 0)
+        return startOfDay(input, options);
+    const formatter = createFormatter(options.timeZone);
+    const start = dateOnlyDay(input) ?? calendarDay(input, formatter);
+    const targetDay = start / ONE_DAY_MS + amount;
+    if (Math.abs(targetDay) > MAX_CALENDAR_DAY_MS / ONE_DAY_MS)
+        throw new TypeError("Invalid date");
+    return checkedDayStart(targetDay * ONE_DAY_MS, formatter);
+}
 export function formatRelativeJaDate(input, baseInput = new Date(), options = {}) {
     const formatter = createFormatter(options.timeZone);
     const diffDays = (calendarDay(input, formatter) - calendarDay(baseInput, formatter)) / ONE_DAY_MS;
@@ -249,12 +261,10 @@ function moveBusinessDays(day, amount, rules, formatter) {
     }
     const direction = Math.sign(amount);
     const step = direction * ONE_DAY_MS;
-    // A local calendar date can extend one day beyond the UTC Date limits.
-    const limit = MAX_DATE_MS + ONE_DAY_MS;
     let remaining = Math.abs(amount);
-    if (remaining > (limit - direction * day) / ONE_DAY_MS)
+    if (remaining > (MAX_CALENDAR_DAY_MS - direction * day) / ONE_DAY_MS)
         throw new TypeError("Invalid date");
-    for (const start of businessDaysBetween(day + step, direction * limit, rules, formatter)) {
+    for (const start of businessDaysBetween(day + step, direction * MAX_CALENDAR_DAY_MS, rules, formatter)) {
         remaining -= 1;
         if (remaining === 0)
             return start;
