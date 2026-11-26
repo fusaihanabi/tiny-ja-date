@@ -74,6 +74,87 @@ describe("createBusinessCalendar", () => {
   })
 })
 
+describe("workingDates", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+  const saturday = "2026-11-21"
+  const saturdayStart = new Date("2026-11-20T15:00:00Z")
+  const allWeekdays = [0, 1, 2, 3, 4, 5, 6]
+
+  it("opens a normally closed day across the business-day APIs", () => {
+    const options = { ...tokyo, workingDates: [saturday] }
+    expect(isWeekendJP(saturday, options)).toBe(true)
+    expect(isBusinessDay(saturday, options)).toBe(true)
+    expect(nextBusinessDay("2026-11-20", options)).toEqual(saturdayStart)
+    expect(addBusinessDays("2026-11-23", -1, options)).toEqual(saturdayStart)
+    expect(countBusinessDays("2026-11-20", saturday, options)).toBe(1)
+    expect(listBusinessDays(saturday, "2026-11-22", options)).toEqual([saturdayStart])
+    expect([...iterateBusinessDays("2026-11-22", saturday, options)]).toEqual([saturdayStart])
+  })
+
+  it("gives a holiday priority over a working date", () => {
+    const options = { ...tokyo, workingDates: [saturday], holidays: [saturdayStart] }
+    expect(isBusinessDay(saturday, options)).toBe(false)
+    expect(nextBusinessDay("2026-11-20", options)).toEqual(new Date("2026-11-22T15:00:00Z"))
+    expect(countBusinessDays("2026-11-20", saturday, options)).toBe(0)
+    expect(listBusinessDays(saturday, saturday, options)).toEqual([])
+  })
+
+  it("uses the selected zone to normalize working dates and ignores dates skipped entirely", () => {
+    const workingDates = ["2026-11-20T15:00:00Z"]
+    expect(isBusinessDay(saturday, { ...tokyo, workingDates })).toBe(true)
+    expect(isBusinessDay(saturday, { timeZone: "America/Los_Angeles", workingDates })).toBe(false)
+    const apia = {
+      timeZone: "Pacific/Apia",
+      weekendDays: allWeekdays,
+      workingDates: ["2011-12-30"],
+    }
+    expect(isBusinessDay("2011-12-30", apia)).toBe(false)
+    expect(listBusinessDays("2011-12-29", "2012-01-02", apia)).toEqual([])
+    expect(() => nextBusinessDay("2011-12-29", apia)).toThrow(TypeError)
+  })
+
+  it("uses eligible exceptions in either direction when every weekday is closed", () => {
+    const options = {
+      ...tokyo,
+      weekendDays: allWeekdays,
+      workingDates: ["2026-11-24", saturday, "2026-11-23", saturdayStart, "2026-11-22"],
+      holidays: ["2026-11-23"],
+    }
+    const tuesdayStart = new Date("2026-11-23T15:00:00Z")
+    const sundayStart = new Date("2026-11-21T15:00:00Z")
+    const calendar = createBusinessCalendar(options)
+    expect(calendar.nextBusinessDay("2026-11-20")).toEqual(saturdayStart)
+    expect(calendar.addBusinessDays("2026-11-20", 3)).toEqual(tuesdayStart)
+    expect(calendar.addBusinessDays("2026-11-25", -2)).toEqual(sundayStart)
+    expect(calendar.countBusinessDays("2000-01-01", "2100-01-01")).toBe(3)
+    expect(calendar.countBusinessDays("2026-11-24", saturday)).toBe(-2)
+    expect(calendar.listBusinessDays(saturday, "2026-11-24")).toEqual([saturdayStart, sundayStart, tuesdayStart])
+    expect([...calendar.iterateBusinessDays("2026-11-24", "2026-11-22")]).toEqual([tuesdayStart, sundayStart])
+    expect(() => calendar.nextBusinessDay("2026-11-24")).toThrow(TypeError)
+    expect(() => calendar.addBusinessDays("2026-11-20", 4)).toThrow(TypeError)
+    expect(calendar.addBusinessDays("2026-11-23", 0)).toEqual(new Date("2026-11-22T15:00:00Z"))
+  })
+
+  it("snapshots working date arrays and Date objects when creating a calendar", () => {
+    const date = new Date(saturdayStart)
+    const workingDates = [date]
+    const calendar = createBusinessCalendar({ ...tokyo, workingDates })
+    date.setUTCDate(21)
+    workingDates.length = 0
+    expect(calendar.isBusinessDay(saturday)).toBe(true)
+    expect(calendar.isBusinessDay("2026-11-22")).toBe(false)
+  })
+
+  it("validates working dates eagerly even for moves or ranges of zero days", () => {
+    const invalid = { ...tokyo, workingDates: ["2026-02-30"] }
+    expect(() => createBusinessCalendar(invalid)).toThrow(TypeError)
+    expect(() => addBusinessDays(saturday, 0, invalid)).toThrow(TypeError)
+    expect(() => countBusinessDays(saturday, saturday, invalid)).toThrow(TypeError)
+    expect(() => iterateBusinessDays(saturday, saturday, invalid)).toThrow(TypeError)
+    expect(() => isBusinessDay(saturday, { workingDates: 0 as unknown as readonly number[] })).toThrow(TypeError)
+  })
+})
+
 describe("weekendDays", () => {
   it("opens Saturdays and combines weekly closures with holidays across all business-day functions", () => {
     const options = { timeZone: "Asia/Tokyo", weekendDays: [0], holidays: ["2026-11-23"] }

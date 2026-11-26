@@ -48,3 +48,8 @@ for (const date of calendar.iterateBusinessDays("2026-11-20", "2026-12-31")) {
   if (candidates.length === 3) break
 }
 expectEqual(candidates.map((date) => formatJaDate(date, tokyo)).join(","), expected)
+
+const exceptionOptions: BusinessDayOptions = { ...tokyo, workingDates: ["2026-11-21"] }
+const exceptionCalendar: BusinessCalendar = createBusinessCalendar(exceptionOptions)
+expectEqual(exceptionCalendar.nextBusinessDay("2026-11-20").toISOString(), "2026-11-20T15:00:00.000Z")
+expectEqual(isBusinessDay("2026-11-21", { ...exceptionOptions, holidays: ["2026-11-21"] }), false)

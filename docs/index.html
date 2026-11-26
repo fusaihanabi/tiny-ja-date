@@ -148,8 +148,8 @@ formatRelativeJaDate(
             <div class="col-md-4">
               <div class="card feature-card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
-                  <h2 class="h5 fw-bold">Weekend only</h2>
-                  <p class="muted mb-0">営業日計算では、毎週の休業曜日と個別の休業日を指定できます。</p>
+                  <h2 class="h5 fw-bold">営業日ルール</h2>
+                  <p class="muted mb-0">定休日、個別の休業日、臨時営業日を指定できます。</p>
                 </div>
               </div>
             </div>
@@ -189,6 +189,11 @@ formatRelativeJaDate(
                   <div class="mb-3">
                     <label for="holidayInput" class="form-label fw-semibold">休業日（任意）</label>
                     <input id="holidayInput" class="form-control form-control-lg" type="date" />
+                  </div>
+                  <div class="mb-3">
+                    <label for="workingDateInput" class="form-label fw-semibold">臨時営業日（任意）</label>
+                    <input id="workingDateInput" class="form-control form-control-lg" type="date" aria-describedby="workingDateHelp" />
+                    <div id="workingDateHelp" class="form-text">同じ日を休業日にも指定すると、休業日として扱います。</div>
                   </div>
                   <fieldset class="mb-3">
                     <legend class="fs-6 fw-semibold mb-1">毎週の休業曜日</legend>
@@ -299,7 +304,7 @@ formatRelativeJaDate(
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                   <h3 class="h5 fw-bold">nextBusinessDay</h3>
-                  <p class="muted"><code>weekendDays</code> と <code>holidays</code> で指定した休業日を飛ばします。</p>
+                  <p class="muted">定休日・休業日・臨時営業日の設定を使って、次の営業日を返します。</p>
                   <code>Date</code>
                 </div>
               </div>
@@ -366,11 +371,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@1.1.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@1.2.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@1.1.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@1.2.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -378,7 +383,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.1.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.2.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -431,6 +436,7 @@ formatRelativeJaDate(
       const dateInput = document.getElementById("dateInput")
       const baseDateInput = document.getElementById("baseDateInput")
       const holidayInput = document.getElementById("holidayInput")
+      const workingDateInput = document.getElementById("workingDateInput")
       const weekendInputs = Array.from(document.querySelectorAll('input[name="weekendDays"]'))
       const timeZoneInput = document.getElementById("timeZoneInput")
       const businessDaysInput = document.getElementById("businessDaysInput")
@@ -440,15 +446,16 @@ formatRelativeJaDate(
 
       function readCalendarSettings() {
         const holiday = holidayInput.value
-        if (holiday && !datePattern.test(holiday)) return undefined
+        const workingDate = workingDateInput.value
+        if ([holiday, workingDate].some((date) => date && !datePattern.test(date))) return undefined
 
         const holidays = holiday ? [holiday] : []
+        const workingDates = workingDate ? [workingDate] : []
         const weekendDays = weekendInputs.filter((input) => input.checked).map((input) => Number(input.value))
         const dateOptions = { timeZone: timeZoneInput.value || undefined }
         return {
           dateOptions,
-          calendar: createBusinessCalendar({ ...dateOptions, holidays, weekendDays }),
-          allDaysClosed: weekendDays.length === weekendInputs.length,
+          calendar: createBusinessCalendar({ ...dateOptions, holidays, weekendDays, workingDates }),
         }
       }
 
@@ -482,22 +489,22 @@ formatRelativeJaDate(
         `
       }
 
-      function businessDaysRow(date, { calendar, dateOptions, allDaysClosed }) {
+      function businessDateRow(label, dateOptions, findDate) {
+        try {
+          const result = findDate()
+          return resultRow(label, `${formatJaDate(result, dateOptions)} / ${result.toISOString()}`)
+        } catch (error) {
+          if (!(error instanceof TypeError)) throw error
+          return resultRow(label, "該当する日付がありません。", "text-bg-warning")
+        }
+      }
+
+      function businessDaysRow(date, { calendar, dateOptions }) {
         const amount = businessDaysInput.valueAsNumber
         if (!Number.isSafeInteger(amount)) {
           return resultRow("addBusinessDays", "営業日数を整数で入力してください。", "text-bg-warning")
         }
-        if (amount !== 0 && allDaysClosed) {
-          return resultRow("addBusinessDays", "営業日がありません。", "text-bg-warning")
-        }
-
-        try {
-          const result = calendar.addBusinessDays(date, amount)
-          return resultRow("addBusinessDays", `${formatJaDate(result, dateOptions)} / ${result.toISOString()}`)
-        } catch (error) {
-          if (!(error instanceof TypeError)) throw error
-          return resultRow("addBusinessDays", "結果の日付を取得できません。", "text-bg-warning")
-        }
+        return businessDateRow("addBusinessDays", dateOptions, () => calendar.addBusinessDays(date, amount))
       }
 
       function renderResults() {
@@ -513,8 +520,7 @@ formatRelativeJaDate(
           return
         }
 
-        const { calendar, dateOptions, allDaysClosed } = settings
-        const next = allDaysClosed ? undefined : calendar.nextBusinessDay(date)
+        const { calendar, dateOptions } = settings
         const businessDay = calendar.isBusinessDay(date)
         const weekend = isWeekendJP(date, dateOptions)
 
@@ -523,9 +529,7 @@ formatRelativeJaDate(
           resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate, dateOptions)),
           resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
           resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
-          next
-            ? resultRow("nextBusinessDay", `${formatJaDate(next, dateOptions)} / ${next.toISOString()}`)
-            : resultRow("nextBusinessDay", "営業日がありません。", "text-bg-warning"),
+          businessDateRow("nextBusinessDay", dateOptions, () => calendar.nextBusinessDay(date)),
           businessDaysRow(date, settings),
           resultRow("countBusinessDays", String(calendar.countBusinessDays(baseDate, date))),
           businessDayListRow(baseDate, date, settings),
@@ -535,6 +539,7 @@ formatRelativeJaDate(
       dateInput.addEventListener("input", renderResults)
       baseDateInput.addEventListener("input", renderResults)
       holidayInput.addEventListener("input", updateCalendar)
+      workingDateInput.addEventListener("input", updateCalendar)
       weekendInputs.forEach((input) => input.addEventListener("change", updateCalendar))
       timeZoneInput.addEventListener("change", updateCalendar)
       businessDaysInput.addEventListener("input", renderResults)

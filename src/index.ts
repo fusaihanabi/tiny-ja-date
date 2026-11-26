@@ -7,6 +7,7 @@ export interface DateOptions {
 export interface BusinessDayOptions extends DateOptions {
   holidays?: readonly DateInput[]
   weekendDays?: readonly number[]
+  workingDates?: readonly DateInput[]
 }
 
 export interface BusinessCalendar {
@@ -180,6 +181,7 @@ function weekdayOf(day: number): number {
 interface BusinessDayRules {
   holidays: ReadonlySet<number>
   weekendDays: ReadonlySet<number>
+  workingDates: ReadonlySet<number>
 }
 
 function weekendDaySet(input: readonly number[] | undefined): ReadonlySet<number> {
@@ -203,7 +205,22 @@ function businessDayRules(
   return {
     holidays: new Set(options.holidays?.map((holiday) => calendarDay(holiday, formatter))),
     weekendDays: weekendDaySet(options.weekendDays),
+    workingDates: workingDateSet(options.workingDates, formatter),
   }
+}
+
+function workingDateSet(
+  input: readonly DateInput[] | undefined,
+  formatter: Intl.DateTimeFormat | undefined,
+): ReadonlySet<number> {
+  const dates = new Set<number>()
+  if (input === undefined) return dates
+  if (!Array.isArray(input)) throw new TypeError("Expected a workingDates array")
+
+  for (const date of input) {
+    dates.add(calendarDay(date, formatter))
+  }
+  return dates
 }
 
 function dayStart(day: number, formatter: Intl.DateTimeFormat | undefined): Date | undefined {
@@ -221,7 +238,8 @@ function businessDayStart(
   rules: BusinessDayRules,
   formatter: Intl.DateTimeFormat | undefined,
 ): Date | undefined {
-  if (rules.weekendDays.has(weekdayOf(candidate)) || rules.holidays.has(candidate)) return undefined
+  if (rules.holidays.has(candidate)) return undefined
+  if (rules.weekendDays.has(weekdayOf(candidate)) && !rules.workingDates.has(candidate)) return undefined
   return dayStart(candidate, formatter)
 }
 
@@ -278,7 +296,9 @@ function moveBusinessDays(
     return start
   }
 
-  if (rules.weekendDays.size === WEEKDAYS_JA.length) throw new TypeError("No business days")
+  if (rules.weekendDays.size === WEEKDAYS_JA.length && rules.workingDates.size === 0) {
+    throw new TypeError("No business days")
+  }
 
   const direction = Math.sign(amount)
   const step = direction * ONE_DAY_MS
@@ -287,10 +307,7 @@ function moveBusinessDays(
   let remaining = Math.abs(amount)
   if (remaining > (limit - direction * day) / ONE_DAY_MS) throw new TypeError("Invalid date")
 
-  for (let candidate = day + step; Math.abs(candidate) <= limit; candidate += step) {
-    const start = businessDayStart(candidate, rules, formatter)
-    if (!start) continue
-
+  for (const start of businessDaysBetween(day + step, direction * limit, rules, formatter)) {
     remaining -= 1
     if (remaining === 0) return start
   }
@@ -315,15 +332,13 @@ function countBusinessDaysBetween(
   rules: BusinessDayRules,
   formatter: Intl.DateTimeFormat | undefined,
 ): number {
-  if (rules.weekendDays.size === WEEKDAYS_JA.length) return 0
-  const direction = Math.sign(end - start)
-  const step = direction * ONE_DAY_MS
-  let count = 0
-  let day = start
+  if (start === end) return 0
 
-  while (day !== end) {
-    day += step
-    if (businessDayStart(day, rules, formatter)) count += direction
+  const direction = Math.sign(end - start)
+  const first = start + direction * ONE_DAY_MS
+  let count = 0
+  for (const _ of businessDaysBetween(first, end, rules, formatter)) {
+    count += direction
   }
 
   return count
@@ -354,9 +369,18 @@ function* businessDaysBetween(
   rules: BusinessDayRules,
   formatter: Intl.DateTimeFormat | undefined,
 ): Generator<Date, void, unknown> {
-  if (rules.weekendDays.size === WEEKDAYS_JA.length) return
+  const direction = start <= end ? 1 : -1
+  if (rules.weekendDays.size === WEEKDAYS_JA.length) {
+    const candidates = [...rules.workingDates].sort((left, right) => direction * (left - right))
+    for (const day of candidates) {
+      if (direction * (day - start) < 0 || direction * (end - day) < 0) continue
+      const businessDay = businessDayStart(day, rules, formatter)
+      if (businessDay) yield businessDay
+    }
+    return
+  }
 
-  const step = start <= end ? ONE_DAY_MS : -ONE_DAY_MS
+  const step = direction * ONE_DAY_MS
   for (let day = start; ; day += step) {
     const businessDay = businessDayStart(day, rules, formatter)
     if (businessDay) yield businessDay

@@ -11,6 +11,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - 2つの日付間の営業日数
 - 期間内の営業日一覧
 - 営業日を1件ずつ取得
+- 臨時営業日の指定
 
 ## Install
 
@@ -19,7 +20,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.1.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.2.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -112,8 +113,8 @@ isWeekendJP(new Date(2026, 4, 16))
 ### `isBusinessDay(date: DateInput, options?: BusinessDayOptions): boolean`
 
 Checks the input date itself in the selected time zone. Returns `false` for
-weekly closures, dates in `options.holidays`, and dates skipped entirely by
-the time zone. A date that starts after midnight can still be a business day.
+dates closed by the [business-day rules](#working-date-exceptions) and dates
+skipped entirely by the time zone. A date that starts after midnight can still be a business day.
 Invalid holiday inputs throw a `TypeError`, even when the input falls on a
 weekly closure.
 
@@ -134,9 +135,8 @@ zone. If midnight is skipped, the result is the first valid time on that date.
 If a time zone skipped an entire date, the search continues to the following date.
 Calling `toISOString()` on the result displays the instant in UTC.
 
-The search starts the day after the input and skips weekly closures and dates
-in `options.holidays`. Each holiday accepts the same `DateInput` type as the
-input date.
+The search starts the day after the input and applies the
+[business-day rules](#working-date-exceptions).
 
 ```ts
 nextBusinessDay(new Date(2026, 4, 15))
@@ -149,13 +149,13 @@ nextBusinessDay("2026-05-15", { holidays: ["2026-05-18"] })
 ### `addBusinessDays(date: DateInput, amount: number, options?: BusinessDayOptions): Date`
 
 Counts forward for a positive amount and backward for a negative amount. Counting
-starts the day after or before the input and skips weekly closures, dates in
-`options.holidays`, and dates skipped entirely by the time zone.
+starts the day after or before the input and applies the
+[business-day rules](#working-date-exceptions).
 `addBusinessDays(date, 1, options)` is equivalent to `nextBusinessDay(date, options)`.
 
 Zero returns the start of the input date, including a weekend or holiday.
 When midnight is skipped, the result is the first valid time on that date.
-If the entire input date is skipped, zero throws a `TypeError`. Holiday inputs
+If the entire input date is skipped, zero throws a `TypeError`. Calendar options
 are validated for every amount, including zero. An amount that is not a safe
 integer throws a `RangeError`. A result beyond the `Date` range throws a `TypeError`.
 
@@ -176,9 +176,8 @@ zone. The starting date is excluded, and the destination counts if it is a
 business day. Counts are positive going forward and negative going backward.
 The same calendar date or a range with no business days returns `0`.
 
-Weekly closures, dates in `options.holidays`, and dates skipped entirely by the time
-zone do not count. Both endpoints and all holiday inputs are validated even
-when the result is `0`.
+The [business-day rules](#working-date-exceptions) apply throughout the range.
+Both endpoints and calendar options are validated even when the result is `0`.
 
 ```ts
 const options = { timeZone: "Asia/Tokyo", holidays: ["2026-11-23"] }
@@ -196,9 +195,9 @@ Lists business days from `from` through `to`, including either endpoint when it
 is a business day. The dates appear in the requested direction. Equal endpoints
 return one date if it is a business day, or an empty array otherwise.
 
-Weekly closures, individual holidays, and dates skipped entirely by the time zone
-are excluded. Each `Date` represents the day's first valid time in the selected
-time zone. Each call returns a fresh array with fresh `Date` objects.
+The [business-day rules](#working-date-exceptions) apply throughout the range.
+Each `Date` represents the day's first valid time in the selected time zone.
+Each call returns a fresh array with fresh `Date` objects.
 
 ```ts
 const options = {
@@ -246,14 +245,14 @@ Creates a reusable calendar with `isBusinessDay(date)`, `nextBusinessDay(date)`,
 `addBusinessDays(date, amount)`, `countBusinessDays(from, to)`,
 `listBusinessDays(from, to)`, and `iterateBusinessDays(from, to)` methods.
 Each method follows the same rules as the standalone function. The factory
-validates the time zone, weekend days, and holidays when creating the calendar.
+validates the time zone, weekend days, holidays, and working dates when creating the calendar.
 Method arguments are validated on each call.
 
 Custom implementations of the `BusinessCalendar` interface must also provide
 `iterateBusinessDays` starting in 1.1.0.
 
 The calendar stores the rules as they were at creation. Editing the original
-options, arrays, or holiday `Date` objects has no effect on an existing calendar.
+options, arrays, or the `Date` objects they contain has no effect on an existing calendar.
 Create a new calendar when the rules change. The default uses the runtime's
 local time zone and closes Saturday and Sunday.
 
@@ -282,12 +281,10 @@ in `BusinessDayOptions`. Use integers from `0` (Sunday) through `6` (Saturday).
 - Duplicate weekdays count once. Values outside the integer range throw a
   `RangeError`. A non-array value throws a `TypeError`. Validation also applies
   to zero-day moves and same-date counts.
-- Closing all seven days makes `isBusinessDay` return `false` and
-  `countBusinessDays` return `0`. `listBusinessDays` returns an empty array.
-  `iterateBusinessDays` yields no dates.
-  `nextBusinessDay` and nonzero
-  `addBusinessDays` calls throw a `TypeError`. A zero-day move still returns the
-  start of the input date.
+- Closing all seven days leaves only eligible dates from `workingDates`.
+  `nextBusinessDay` and nonzero `addBusinessDays` calls throw a `TypeError`
+  when there is no reachable business day. A zero-day move returns the start
+  of the input date.
 
 ```ts
 const options = {
@@ -301,11 +298,34 @@ nextBusinessDay("2026-11-20", options) // Start of 2026-11-21 in Tokyo
 countBusinessDays("2026-11-20", "2026-11-24", options) // 2 (Saturday and Tuesday)
 ```
 
+## Working date exceptions
+
+The business-day functions and calendar methods accept
+`workingDates?: readonly DateInput[]` in `BusinessDayOptions`.
+Both `workingDates` and `holidays` use the selected time zone and the same
+date input rules. Multiple entries for the same calendar date count once.
+
+A date skipped entirely by the time zone is closed. For dates that exist,
+the first matching rule applies.
+
+1. A date in `holidays` is closed.
+2. A date in `workingDates` is open.
+3. A weekday in `weekendDays` is closed.
+4. Every other date is open.
+
+```ts
+const options = { timeZone: "Asia/Tokyo", workingDates: ["2026-11-21"] }
+
+isBusinessDay("2026-11-21", options) // true (Saturday opening)
+nextBusinessDay("2026-11-20", options).toISOString() // "2026-11-20T15:00:00.000Z"
+isBusinessDay("2026-11-21", { ...options, holidays: ["2026-11-21"] }) // false
+```
+
 ## Time zones
 
 All public functions accept an optional `timeZone` such as `"Asia/Tokyo"`.
-The selected zone applies to input dates, base dates, range endpoints, and
-holidays. Omitting it uses the runtime's local time zone. Unrecognized IANA
+The selected zone applies to input dates, base dates, range endpoints,
+holidays, and working dates. Omitting it uses the runtime's local time zone. Unrecognized IANA
 names throw a `RangeError`.
 
 ```ts
