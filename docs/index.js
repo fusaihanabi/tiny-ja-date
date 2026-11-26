@@ -264,24 +264,29 @@ export function countBusinessDays(from, to, options = {}) {
     const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
     return countBusinessDaysBetween(start, end, businessDayRules(options, formatter), formatter);
 }
-function listBusinessDaysBetween(from, to, rules, formatter) {
+function iterateBusinessDaysBetween(from, to, rules, formatter) {
     const start = dateOnlyDay(from) ?? calendarDay(from, formatter);
     const end = dateOnlyDay(to) ?? calendarDay(to, formatter);
+    return businessDaysBetween(start, end, rules, formatter);
+}
+function* businessDaysBetween(start, end, rules, formatter) {
     if (rules.weekendDays.size === WEEKDAYS_JA.length)
-        return [];
-    const days = [];
+        return;
     const step = start <= end ? ONE_DAY_MS : -ONE_DAY_MS;
     for (let day = start;; day += step) {
         const businessDay = businessDayStart(day, rules, formatter);
         if (businessDay)
-            days.push(businessDay);
+            yield businessDay;
         if (day === end)
-            return days;
+            return;
     }
 }
-export function listBusinessDays(from, to, options = {}) {
+export function iterateBusinessDays(from, to, options = {}) {
     const formatter = createFormatter(options.timeZone);
-    return listBusinessDaysBetween(from, to, businessDayRules(options, formatter), formatter);
+    return iterateBusinessDaysBetween(from, to, businessDayRules(options, formatter), formatter);
+}
+export function listBusinessDays(from, to, options = {}) {
+    return Array.from(iterateBusinessDays(from, to, options));
 }
 export function createBusinessCalendar(options = {}) {
     const formatter = createFormatter(options.timeZone);
@@ -304,7 +309,10 @@ export function createBusinessCalendar(options = {}) {
             return countBusinessDaysBetween(start, end, rules, formatter);
         },
         listBusinessDays(from, to) {
-            return listBusinessDaysBetween(from, to, rules, formatter);
+            return Array.from(iterateBusinessDaysBetween(from, to, rules, formatter));
+        },
+        iterateBusinessDays(from, to) {
+            return iterateBusinessDaysBetween(from, to, rules, formatter);
         },
     };
 }

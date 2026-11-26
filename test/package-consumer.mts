@@ -6,6 +6,7 @@ import {
   formatRelativeJaDate,
   isBusinessDay,
   isWeekendJP,
+  iterateBusinessDays,
   listBusinessDays,
   nextBusinessDay,
   type BusinessCalendar,
@@ -37,3 +38,13 @@ const expected = "2026年11月20日（金）,2026年11月21日（土）,2026年1
 expectEqual(dates.map((date) => formatJaDate(date, tokyo)).join(","), expected)
 expectEqual(calendar.listBusinessDays("2026-11-20", "2026-11-24")
   .map((date) => formatJaDate(date, tokyo)).join(","), expected)
+
+const iterable: Generator<Date, void, unknown> = iterateBusinessDays("2026-11-20", "2026-11-24", options)
+expectEqual([...iterable].map((date) => formatJaDate(date, tokyo)).join(","), expected)
+
+const candidates: Date[] = []
+for (const date of calendar.iterateBusinessDays("2026-11-20", "2026-12-31")) {
+  candidates.push(date)
+  if (candidates.length === 3) break
+}
+expectEqual(candidates.map((date) => formatJaDate(date, tokyo)).join(","), expected)

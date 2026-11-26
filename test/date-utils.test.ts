@@ -7,6 +7,7 @@ import {
   formatRelativeJaDate,
   isBusinessDay,
   isWeekendJP,
+  iterateBusinessDays,
   listBusinessDays,
   nextBusinessDay,
 } from "../src"
@@ -442,6 +443,78 @@ describe("listBusinessDays", () => {
     days[0].setUTCDate(1)
     days.pop()
     expect(calendar.listBusinessDays("2026-11-20", "2026-11-24")).toEqual(expected)
+  })
+})
+
+describe("iterateBusinessDays", () => {
+  const options = { timeZone: "Asia/Tokyo", weekendDays: [0], holidays: ["2026-11-23"] }
+
+  it("yields the same days as the list in both directions", () => {
+    const expected = [
+      new Date("2026-11-19T15:00:00Z"),
+      new Date("2026-11-20T15:00:00Z"),
+      new Date("2026-11-23T15:00:00Z"),
+    ]
+    const calendar = createBusinessCalendar(options)
+    expect([...iterateBusinessDays("2026-11-20", "2026-11-24", options)]).toEqual(expected)
+    expect([...calendar.iterateBusinessDays("2026-11-24", "2026-11-20")]).toEqual([...expected].reverse())
+    expect([...calendar.iterateBusinessDays("2026-11-24", "2026-11-20")])
+      .toEqual(calendar.listBusinessDays("2026-11-24", "2026-11-20"))
+  })
+
+  it("includes equal endpoints only when open and yields nothing when all weekdays are closed", () => {
+    expect([...iterateBusinessDays("2026-11-21", "2026-11-21", options)])
+      .toEqual([new Date("2026-11-20T15:00:00Z")])
+    expect([...iterateBusinessDays("2026-11-23", "2026-11-23", options)]).toEqual([])
+    expect([...iterateBusinessDays("2026-11-20", "2026-11-24", {
+      weekendDays: [0, 1, 2, 3, 4, 5, 6],
+    })]).toEqual([])
+  })
+
+  it("validates endpoints and settings before the first read", () => {
+    expect(() => iterateBusinessDays("2026-02-30", "2026-11-24", options)).toThrow(TypeError)
+    expect(() => createBusinessCalendar(options).iterateBusinessDays("2026-11-20", "2026-02-30"))
+      .toThrow(TypeError)
+    expect(() => iterateBusinessDays("2026-11-20", "2026-11-20", { holidays: ["2026-02-30"] }))
+      .toThrow(TypeError)
+    expect(() => iterateBusinessDays("2026-11-20", "2026-11-20", { timeZone: "Invalid/Zone" }))
+      .toThrow(RangeError)
+  })
+
+  it("starts searching on the first read and stops after a break", () => {
+    const formatParts = vi.spyOn(Intl.DateTimeFormat.prototype, "formatToParts")
+    try {
+      const from = "2026-11-20"
+      const iterator = iterateBusinessDays(from, "2026-12-31", options)
+      expect(formatParts).not.toHaveBeenCalled()
+
+      const received: Date[] = []
+      for (const date of iterator) {
+        received.push(date)
+        break
+      }
+      expect(iterator.next().done).toBe(true)
+      const probes = formatParts.mock.calls.length
+      expect(probes).toBeGreaterThan(0)
+
+      formatParts.mockClear()
+      expect(received).toEqual(listBusinessDays(from, from, options))
+      expect(formatParts).toHaveBeenCalledTimes(probes)
+    } finally {
+      formatParts.mockRestore()
+    }
+  })
+
+  it("keeps iterators independent and returns fresh dates", () => {
+    const calendar = createBusinessCalendar(options)
+    const first = calendar.iterateBusinessDays("2026-11-20", "2026-11-24")
+    const second = calendar.iterateBusinessDays("2026-11-20", "2026-11-24")
+    const start = first.next().value
+    expect(start).toEqual(new Date("2026-11-19T15:00:00Z"))
+    if (start) start.setUTCDate(1)
+
+    expect(second.next().value).toEqual(new Date("2026-11-19T15:00:00Z"))
+    expect(first.next().value).toEqual(new Date("2026-11-20T15:00:00Z"))
   })
 })
 

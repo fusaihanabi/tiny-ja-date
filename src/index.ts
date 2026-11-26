@@ -15,6 +15,7 @@ export interface BusinessCalendar {
   addBusinessDays(input: DateInput, amount: number): Date
   countBusinessDays(from: DateInput, to: DateInput): number
   listBusinessDays(from: DateInput, to: DateInput): Date[]
+  iterateBusinessDays(from: DateInput, to: DateInput): Generator<Date, void, unknown>
 }
 
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"] as const
@@ -335,28 +336,45 @@ export function countBusinessDays(from: DateInput, to: DateInput, options: Busin
   return countBusinessDaysBetween(start, end, businessDayRules(options, formatter), formatter)
 }
 
-function listBusinessDaysBetween(
+function iterateBusinessDaysBetween(
   from: DateInput,
   to: DateInput,
   rules: BusinessDayRules,
   formatter: Intl.DateTimeFormat | undefined,
-): Date[] {
+): Generator<Date, void, unknown> {
   const start = dateOnlyDay(from) ?? calendarDay(from, formatter)
   const end = dateOnlyDay(to) ?? calendarDay(to, formatter)
-  if (rules.weekendDays.size === WEEKDAYS_JA.length) return []
 
-  const days: Date[] = []
+  return businessDaysBetween(start, end, rules, formatter)
+}
+
+function* businessDaysBetween(
+  start: number,
+  end: number,
+  rules: BusinessDayRules,
+  formatter: Intl.DateTimeFormat | undefined,
+): Generator<Date, void, unknown> {
+  if (rules.weekendDays.size === WEEKDAYS_JA.length) return
+
   const step = start <= end ? ONE_DAY_MS : -ONE_DAY_MS
   for (let day = start; ; day += step) {
     const businessDay = businessDayStart(day, rules, formatter)
-    if (businessDay) days.push(businessDay)
-    if (day === end) return days
+    if (businessDay) yield businessDay
+    if (day === end) return
   }
 }
 
-export function listBusinessDays(from: DateInput, to: DateInput, options: BusinessDayOptions = {}): Date[] {
+export function iterateBusinessDays(
+  from: DateInput,
+  to: DateInput,
+  options: BusinessDayOptions = {},
+): Generator<Date, void, unknown> {
   const formatter = createFormatter(options.timeZone)
-  return listBusinessDaysBetween(from, to, businessDayRules(options, formatter), formatter)
+  return iterateBusinessDaysBetween(from, to, businessDayRules(options, formatter), formatter)
+}
+
+export function listBusinessDays(from: DateInput, to: DateInput, options: BusinessDayOptions = {}): Date[] {
+  return Array.from(iterateBusinessDays(from, to, options))
 }
 
 export function createBusinessCalendar(options: BusinessDayOptions = {}): BusinessCalendar {
@@ -381,7 +399,10 @@ export function createBusinessCalendar(options: BusinessDayOptions = {}): Busine
       return countBusinessDaysBetween(start, end, rules, formatter)
     },
     listBusinessDays(from, to) {
-      return listBusinessDaysBetween(from, to, rules, formatter)
+      return Array.from(iterateBusinessDaysBetween(from, to, rules, formatter))
+    },
+    iterateBusinessDays(from, to) {
+      return iterateBusinessDaysBetween(from, to, rules, formatter)
     },
   }
 }

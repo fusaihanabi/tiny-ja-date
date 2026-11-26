@@ -10,6 +10,7 @@ Tiny TypeScript date utilities for Japanese UI.
 - 営業日数の加算・減算
 - 2つの日付間の営業日数
 - 期間内の営業日一覧
+- 営業日を1件ずつ取得
 
 ## Install
 
@@ -18,7 +19,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.0.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.1.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -216,14 +217,40 @@ countBusinessDays("2026-11-20", "2026-11-24", options)
 // 2, starting the count after November 20
 ```
 
+### `iterateBusinessDays(from: DateInput, to: DateInput, options?: BusinessDayOptions): Generator<Date, void, unknown>`
+
+Yields business days one at a time. The inclusive endpoints, direction, and
+start-of-day values follow `listBusinessDays`. Endpoints and options are
+validated when called. The search starts on the first read, and breaking
+from a `for...of` loop stops the search. Each call creates an independent
+iterator with fresh `Date` values.
+
+```ts
+const calendar = createBusinessCalendar({
+  timeZone: "Asia/Tokyo",
+  weekendDays: [0],
+  holidays: ["2026-11-23"],
+})
+
+const candidates: Date[] = []
+for (const day of calendar.iterateBusinessDays("2026-11-20", "2026-12-31")) {
+  candidates.push(day)
+  if (candidates.length === 3) break
+}
+// Starts of November 20, 21, and 24 in Tokyo
+```
+
 ### `createBusinessCalendar(options?: BusinessDayOptions): BusinessCalendar`
 
 Creates a reusable calendar with `isBusinessDay(date)`, `nextBusinessDay(date)`,
-`addBusinessDays(date, amount)`, `countBusinessDays(from, to)`, and
-`listBusinessDays(from, to)` methods.
+`addBusinessDays(date, amount)`, `countBusinessDays(from, to)`,
+`listBusinessDays(from, to)`, and `iterateBusinessDays(from, to)` methods.
 Each method follows the same rules as the standalone function. The factory
 validates the time zone, weekend days, and holidays when creating the calendar.
 Method arguments are validated on each call.
+
+Custom implementations of the `BusinessCalendar` interface must also provide
+`iterateBusinessDays` starting in 1.1.0.
 
 The calendar stores the rules as they were at creation. Editing the original
 options, arrays, or holiday `Date` objects has no effect on an existing calendar.
@@ -245,9 +272,9 @@ calendar.listBusinessDays("2026-11-20", "2026-11-24")
 
 ## Weekly closures
 
-`isBusinessDay`, `nextBusinessDay`, `addBusinessDays`, `countBusinessDays`, and
-`listBusinessDays` accept `weekendDays?: readonly number[]` in `BusinessDayOptions`. Use integers
-from `0` (Sunday) through `6` (Saturday).
+`isBusinessDay`, `nextBusinessDay`, `addBusinessDays`, `countBusinessDays`,
+`listBusinessDays`, and `iterateBusinessDays` accept `weekendDays?: readonly number[]`
+in `BusinessDayOptions`. Use integers from `0` (Sunday) through `6` (Saturday).
 
 - Omitting `weekendDays` closes Saturday and Sunday, equivalent to `[0, 6]`.
 - An explicit array replaces the default. An empty array clears all weekly
@@ -257,6 +284,7 @@ from `0` (Sunday) through `6` (Saturday).
   to zero-day moves and same-date counts.
 - Closing all seven days makes `isBusinessDay` return `false` and
   `countBusinessDays` return `0`. `listBusinessDays` returns an empty array.
+  `iterateBusinessDays` yields no dates.
   `nextBusinessDay` and nonzero
   `addBusinessDays` calls throw a `TypeError`. A zero-day move still returns the
   start of the input date.
