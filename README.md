@@ -3,6 +3,7 @@
 Tiny TypeScript date utilities for Japanese UI.
 
 - 日本語の日付表示
+- `YYYY-MM-DD` 形式の日付表示
 - 日本語の相対日付表示
 - 土日判定
 - 営業日判定
@@ -20,7 +21,7 @@ npm install tiny-ja-date
 ```
 
 The package provides an ES module and TypeScript declarations.
-Version 1.2.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
+Version 1.3.0 was verified on Windows x64 with Node.js 26.13.1, npm 11.20.0,
 and TypeScript 5.9.3. Time zone calculations use the runtime's
 `Intl.DateTimeFormat` and its time zone data.
 
@@ -31,6 +32,7 @@ import {
   addBusinessDays,
   countBusinessDays,
   createBusinessCalendar,
+  formatIsoDate,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -41,6 +43,9 @@ import {
 
 formatJaDate(new Date(2026, 4, 12))
 // "2026年5月12日（火）"
+
+formatIsoDate(new Date(2026, 4, 12))
+// "2026-05-12"
 
 formatRelativeJaDate(new Date(2026, 4, 15), new Date(2026, 4, 12))
 // "3日後"
@@ -77,6 +82,26 @@ Formats a date as a Japanese date label.
 ```ts
 formatJaDate(new Date(2026, 4, 12))
 // "2026年5月12日（火）"
+```
+
+### `formatIsoDate(date: DateInput, options?: DateOptions): string`
+
+Formats the calendar date in the selected time zone as `YYYY-MM-DD`, with
+four digits for the year and two each for the month and day. It accepts the
+same inputs as `formatJaDate` and defaults to the runtime's local time zone.
+An invalid date throws a `TypeError`. An unsupported time zone or a
+calendar year outside `0000`–`9999` throws a `RangeError`.
+
+```ts
+const tokyo = { timeZone: "Asia/Tokyo" }
+const next = nextBusinessDay("2026-11-20", {
+  ...tokyo,
+  workingDates: ["2026-11-21"],
+})
+
+formatIsoDate(next, tokyo) // "2026-11-21"
+formatIsoDate(next, { timeZone: "America/Los_Angeles" }) // "2026-11-20"
+next.toISOString() // "2026-11-20T15:00:00.000Z"
 ```
 
 ### `formatRelativeJaDate(date: DateInput, baseDate?: DateInput, options?: DateOptions): string`
@@ -134,6 +159,7 @@ Returns a `Date` for the start of the next business day in the selected time
 zone. If midnight is skipped, the result is the first valid time on that date.
 If a time zone skipped an entire date, the search continues to the following date.
 Calling `toISOString()` on the result displays the instant in UTC.
+Use `formatIsoDate(result, { timeZone })` to get the calendar date in the selected zone.
 
 The search starts the day after the input and applies the
 [business-day rules](#working-date-exceptions).

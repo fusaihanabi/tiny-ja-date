@@ -276,6 +276,15 @@ formatRelativeJaDate(
             <div class="col-md-6">
               <div class="card h-100 border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
+                  <h3 class="h5 fw-bold">formatIsoDate</h3>
+                  <p class="muted">指定した地域の暦日を <code>YYYY-MM-DD</code> で返します。</p>
+                  <code>2026-05-12</code>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                   <h3 class="h5 fw-bold">formatRelativeJaDate</h3>
                   <p class="muted">基準日から見た相対日付を日本語で返します。</p>
                   <code>今日</code> / <code>昨日</code> / <code>明日</code> / <code>3日前</code>
@@ -371,11 +380,11 @@ formatRelativeJaDate(
               <div class="mb-3">
                 <div class="d-flex gap-2">
                   <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@1.2.0/dist/index.js</code>
+                    <code>https://unpkg.com/tiny-ja-date@1.3.0/dist/index.js</code>
                   </div>
                   <button
                     class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@1.2.0/dist/index.js"
+                    data-copy="https://unpkg.com/tiny-ja-date@1.3.0/dist/index.js"
                   >
                     Copy
                   </button>
@@ -383,7 +392,7 @@ formatRelativeJaDate(
               </div>
               <div class="code-block">
 <pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.2.0/dist/index.js"
+  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.3.0/dist/index.js"
 
   console.log(formatJaDate(new Date(2026, 4, 12)))
 &lt;/script&gt;</code></pre>
@@ -428,6 +437,7 @@ formatRelativeJaDate(
     <script type="module">
       import {
         createBusinessCalendar,
+        formatIsoDate,
         formatJaDate,
         formatRelativeJaDate,
         isWeekendJP,
@@ -489,10 +499,20 @@ formatRelativeJaDate(
         `
       }
 
-      function businessDateRow(label, dateOptions, findDate) {
+      function businessDateRow(label, dateOptions, findDate, includeIsoDate = false) {
         try {
           const result = findDate()
-          return resultRow(label, `${formatJaDate(result, dateOptions)} / ${result.toISOString()}`)
+          const labels = [formatJaDate(result, dateOptions)]
+          if (includeIsoDate) {
+            try {
+              labels.push(formatIsoDate(result, dateOptions))
+            } catch (error) {
+              if (!(error instanceof RangeError)) throw error
+              labels.push("YYYY-MM-DD の範囲外")
+            }
+          }
+          labels.push(result.toISOString())
+          return resultRow(label, labels.join(" / "), "text-bg-success text-wrap text-break")
         } catch (error) {
           if (!(error instanceof TypeError)) throw error
           return resultRow(label, "該当する日付がありません。", "text-bg-warning")
@@ -529,7 +549,7 @@ formatRelativeJaDate(
           resultRow("formatRelativeJaDate", formatRelativeJaDate(date, baseDate, dateOptions)),
           resultRow("isWeekendJP", String(weekend), weekend ? "text-bg-warning" : "text-bg-secondary"),
           resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
-          businessDateRow("nextBusinessDay", dateOptions, () => calendar.nextBusinessDay(date)),
+          businessDateRow("nextBusinessDay", dateOptions, () => calendar.nextBusinessDay(date), true),
           businessDaysRow(date, settings),
           resultRow("countBusinessDays", String(calendar.countBusinessDays(baseDate, date))),
           businessDayListRow(baseDate, date, settings),

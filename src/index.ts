@@ -252,6 +252,14 @@ export function formatJaDate(input: DateInput, options: DateOptions = {}): strin
   return `${year}年${month}月${day}日（${weekday}）`
 }
 
+export function formatIsoDate(input: DateInput, options: DateOptions = {}): string {
+  const formatter = createFormatter(options.timeZone)
+  const { year, month, day } = utcDateParts(calendarDay(input, formatter))
+  if (year < 0 || year > 9999) throw new RangeError("Expected a year from 0000 to 9999")
+
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
 export function formatRelativeJaDate(
   input: DateInput,
   baseInput: DateInput = new Date(),

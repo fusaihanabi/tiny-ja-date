@@ -2,6 +2,7 @@ import {
   addBusinessDays,
   countBusinessDays,
   createBusinessCalendar,
+  formatIsoDate,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -51,5 +52,9 @@ expectEqual(candidates.map((date) => formatJaDate(date, tokyo)).join(","), expec
 
 const exceptionOptions: BusinessDayOptions = { ...tokyo, workingDates: ["2026-11-21"] }
 const exceptionCalendar: BusinessCalendar = createBusinessCalendar(exceptionOptions)
-expectEqual(exceptionCalendar.nextBusinessDay("2026-11-20").toISOString(), "2026-11-20T15:00:00.000Z")
+const next = exceptionCalendar.nextBusinessDay("2026-11-20")
+expectEqual(next.toISOString(), "2026-11-20T15:00:00.000Z")
+const isoDate: string = formatIsoDate(next, tokyo)
+expectEqual(isoDate, "2026-11-21")
+expectEqual(formatIsoDate(next, { timeZone: "America/Los_Angeles" }), "2026-11-20")
 expectEqual(isBusinessDay("2026-11-21", { ...exceptionOptions, holidays: ["2026-11-21"] }), false)

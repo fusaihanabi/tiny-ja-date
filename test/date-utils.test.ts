@@ -3,6 +3,7 @@ import {
   addBusinessDays,
   countBusinessDays,
   createBusinessCalendar,
+  formatIsoDate,
   formatJaDate,
   formatRelativeJaDate,
   isBusinessDay,
@@ -267,6 +268,45 @@ describe("timeZone", () => {
       ...tokyo,
       holidays: ["2026-11-23T00:00:00"],
     })).toThrow(TypeError)
+  })
+})
+
+describe("formatIsoDate", () => {
+  const tokyo = { timeZone: "Asia/Tokyo" }
+  const utc = { timeZone: "UTC" }
+
+  it("formats the calendar date of an instant in the selected time zone", () => {
+    const next = nextBusinessDay("2026-11-20", { ...tokyo, workingDates: ["2026-11-21"] })
+    expect(next.toISOString()).toBe("2026-11-20T15:00:00.000Z")
+    expect(formatIsoDate(next, tokyo)).toBe("2026-11-21")
+    expect(formatIsoDate(next.getTime(), { timeZone: "America/Los_Angeles" })).toBe("2026-11-20")
+    expect(formatIsoDate("2026-11-21T00:00:00+09:00", tokyo)).toBe("2026-11-21")
+  })
+
+  it("preserves date-only input and pads years, months, and days", () => {
+    expect(formatIsoDate("0099-01-02", tokyo)).toBe("0099-01-02")
+    expect(formatIsoDate("2026-01-02", { timeZone: "America/Los_Angeles" })).toBe("2026-01-02")
+    expect(formatIsoDate("2024-02-29")).toBe("2024-02-29")
+  })
+
+  it("uses local dates when no time zone is provided", () => {
+    expect(formatIsoDate(new Date(2026, 0, 2, 23, 30))).toBe("2026-01-02")
+    expect(formatIsoDate("2026-01-02T23:30:00")).toBe("2026-01-02")
+  })
+
+  it("checks the four-digit year after time zone conversion", () => {
+    expect(formatIsoDate("0000-01-01T00:00:00Z", utc)).toBe("0000-01-01")
+    expect(formatIsoDate("9999-12-31T23:59:59Z", utc)).toBe("9999-12-31")
+    expect(() => formatIsoDate("9999-12-31T15:00:00Z", tokyo)).toThrow(RangeError)
+    expect(() => formatIsoDate("0000-01-01T00:00:00Z", { timeZone: "America/Los_Angeles" }))
+      .toThrow(RangeError)
+  })
+
+  it("rejects invalid dates, strings, and time zones", () => {
+    expect(() => formatIsoDate(NaN)).toThrow(TypeError)
+    expect(() => formatIsoDate("2026-02-29", tokyo)).toThrow(TypeError)
+    expect(() => formatIsoDate("2026-01-02T03:04:00", tokyo)).toThrow(TypeError)
+    expect(() => formatIsoDate("2026-01-02", { timeZone: "Invalid/Zone" })).toThrow(RangeError)
   })
 })
 
