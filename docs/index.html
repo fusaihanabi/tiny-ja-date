@@ -8,448 +8,295 @@
       name="description"
       content="Tiny TypeScript date utilities for Japanese UI. Format Japanese date labels, relative dates, weekend checks, and next business day calculation."
     />
-    <link
-      href="https://unpkg.com/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <style>
-      :root {
-        --hero-bg: #f8fafc;
-        --ink: #172033;
-        --muted: #667085;
-      }
-
-      body {
-        color: var(--ink);
-      }
-
-      .hero {
-        background:
-          radial-gradient(circle at top left, rgba(25, 135, 84, 0.14), transparent 32rem),
-          var(--hero-bg);
-      }
-
-      .badge-soft {
-        background: rgba(25, 135, 84, 0.12);
-        color: #198754;
-      }
-
-      .code-block {
-        background: #101828;
-        color: #f8fafc;
-        border-radius: 1rem;
-        padding: 1rem;
-        overflow-x: auto;
-        font-size: 0.925rem;
-      }
-
-      .code-block code {
-        color: inherit;
-      }
-
-      .muted {
-        color: var(--muted);
-      }
-
-      .feature-card {
-        height: 100%;
-      }
-
-      .copy-button {
-        white-space: nowrap;
-      }
-
-      .result-label {
-        min-width: 9.5rem;
-      }
-
-      .result-list {
-        max-height: 14rem;
-        overflow-y: auto;
-      }
-    </style>
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
-      <div class="container py-2">
-        <a class="navbar-brand fw-bold" href="#">tiny-ja-date</a>
+    <nav class="site-nav" aria-label="メインナビゲーション">
+      <div class="container nav-inner">
+        <a class="site-brand" href="#">tiny-ja-date</a>
         <button
-          class="navbar-toggler"
+          class="button nav-toggle"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
+          aria-controls="navLinks"
           aria-expanded="false"
-          aria-label="Toggle navigation"
+          hidden
         >
-          <span class="navbar-toggler-icon"></span>
+          メニュー
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto gap-lg-2">
-            <li class="nav-item"><a class="nav-link" href="#demo">Demo</a></li>
-            <li class="nav-item"><a class="nav-link" href="#install">Install</a></li>
-            <li class="nav-item"><a class="nav-link" href="#api">API</a></li>
-            <li class="nav-item"><a class="nav-link" href="#cdn">CDN</a></li>
-          </ul>
-        </div>
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#demo">Demo</a></li>
+          <li><a href="#install">Install</a></li>
+          <li><a href="#api">API</a></li>
+          <li><a href="#cdn">CDN</a></li>
+          <li><a href="#related">関連ライブラリ</a></li>
+        </ul>
       </div>
     </nav>
 
-    <header class="hero py-5">
-      <div class="container py-5">
-        <div class="row align-items-center g-5">
-          <div class="col-lg-7">
-            <span class="badge badge-soft rounded-pill px-3 py-2 mb-3">Dependency-free tiny date utilities</span>
-            <h1 class="display-4 fw-bold lh-1 mb-4">
-              Japanese date labels,<br class="d-none d-lg-block" /> made tiny.
-            </h1>
-            <p class="lead muted mb-4">
-              日本語の日付表示、相対日付、土日・営業日判定、営業日数の加算・減算を提供する小さな TypeScript ライブラリです。
+    <header class="hero">
+      <div class="container">
+        <div class="hero-layout">
+          <div>
+            <h1>日本語の日付表示と<br />営業日計算</h1>
+            <p class="hero-intro">
+              日付ラベル、相対日付、暦日・営業日の計算に使える、依存ゼロの TypeScript ライブラリです。
             </p>
-            <div class="d-flex flex-column flex-sm-row gap-3">
-              <a href="#demo" class="btn btn-success btn-lg">Try demo</a>
-              <a href="#install" class="btn btn-outline-secondary btn-lg">Install</a>
+            <div class="actions">
+              <a href="#demo" class="button button-primary">Try demo</a>
+              <a href="#install" class="button">Install</a>
             </div>
           </div>
-          <div class="col-lg-5">
-            <div class="code-block shadow-sm">
-<pre class="mb-0"><code>import {
+          <div class="code-block">
+<pre><code>import {
   formatJaDate,
   formatRelativeJaDate,
-  nextBusinessDay,
 } from "tiny-ja-date"
 
-formatJaDate(new Date(2026, 4, 12))
+formatJaDate("2026-05-12")
 // "2026年5月12日（火）"
 
-formatRelativeJaDate(
-  new Date(2026, 4, 15),
-  new Date(2026, 4, 12),
-)
+formatRelativeJaDate("2026-05-15", "2026-05-12")
 // "3日後"</code></pre>
-            </div>
           </div>
         </div>
       </div>
     </header>
 
     <main>
-      <section class="py-5 border-bottom">
+      <section class="section feature-section">
         <div class="container">
-          <div class="row g-4">
-            <div class="col-md-4">
-              <div class="card feature-card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h2 class="h5 fw-bold">Small scope</h2>
-                  <p class="muted mb-0">日本語UIでよく使う日付ユーティリティだけに絞っています。</p>
-                </div>
-              </div>
+          <div class="card-grid">
+            <div class="panel feature-panel">
+              <h2>Small scope</h2>
+              <p class="muted">日本語UIでよく使う日付ユーティリティだけに絞っています。</p>
             </div>
-            <div class="col-md-4">
-              <div class="card feature-card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h2 class="h5 fw-bold">営業日ルール</h2>
-                  <p class="muted mb-0">定休日、個別の休業日、臨時営業日を指定できます。</p>
-                </div>
-              </div>
+            <div class="panel feature-panel">
+              <h2>営業日ルール</h2>
+              <p class="muted">定休日、個別の休業日、臨時営業日を指定できます。</p>
             </div>
-            <div class="col-md-4">
-              <div class="card feature-card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h2 class="h5 fw-bold">TypeScript ready</h2>
-                  <p class="muted mb-0">依存ゼロ。フロントエンドでもバックエンドでも使えます。</p>
-                </div>
-              </div>
+            <div class="panel feature-panel">
+              <h2>TypeScript ready</h2>
+              <p class="muted">依存ゼロ。フロントエンドでもバックエンドでも使えます。</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="demo" class="py-5">
+      <section id="demo" class="section">
         <div class="container">
-          <div class="row justify-content-center mb-4">
-            <div class="col-lg-8 text-center">
-              <h2 class="fw-bold">Live demo</h2>
-              <p class="muted mb-0">日付と基準日を変更すると、各関数の結果がリアルタイムで変わります。</p>
-            </div>
+          <div class="section-heading">
+            <h2>Live demo</h2>
+            <p class="muted">日付と基準日を変更すると、各関数の結果がリアルタイムで変わります。</p>
           </div>
 
-          <div class="row g-4 align-items-start">
-            <div class="col-lg-5">
-              <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <div class="mb-3">
-                    <label for="dateInput" class="form-label fw-semibold">日付（到着日）</label>
-                    <input id="dateInput" class="form-control form-control-lg" type="date" value="2026-05-15" />
-                  </div>
-                  <div class="mb-3">
-                    <label for="baseDateInput" class="form-label fw-semibold">基準日（出発日）</label>
-                    <input id="baseDateInput" class="form-control form-control-lg" type="date" value="2026-05-12" />
-                  </div>
-                  <div class="mb-3">
-                    <label for="holidayInput" class="form-label fw-semibold">休業日（任意）</label>
-                    <input id="holidayInput" class="form-control form-control-lg" type="date" />
-                  </div>
-                  <div class="mb-3">
-                    <label for="workingDateInput" class="form-label fw-semibold">臨時営業日（任意）</label>
-                    <input id="workingDateInput" class="form-control form-control-lg" type="date" aria-describedby="workingDateHelp" />
-                    <div id="workingDateHelp" class="form-text">同じ日を休業日にも指定すると、休業日として扱います。</div>
-                  </div>
-                  <fieldset class="mb-3">
-                    <legend class="fs-6 fw-semibold mb-1">毎週の休業曜日</legend>
-                    <div class="d-flex flex-wrap gap-2">
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="0" checked /> 日</label>
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="1" /> 月</label>
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="2" /> 火</label>
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="3" /> 水</label>
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="4" /> 木</label>
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="5" /> 金</label>
-                      <label class="text-nowrap"><input class="form-check-input" type="checkbox" name="weekendDays" value="6" checked /> 土</label>
-                    </div>
-                  </fieldset>
-                  <div class="mb-3">
-                    <label for="timeZoneInput" class="form-label fw-semibold">タイムゾーン</label>
-                    <select id="timeZoneInput" class="form-select form-select-lg">
-                      <option value="">実行環境のタイムゾーン</option>
-                      <option value="Asia/Tokyo">日本時間（Asia/Tokyo）</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="businessDaysInput" class="form-label fw-semibold">営業日数</label>
-                    <input id="businessDaysInput" class="form-control form-control-lg" type="number" step="1" value="2" />
-                  </div>
+          <div class="demo-layout">
+            <div class="panel">
+              <div class="field-block">
+                <label for="dateInput" class="field-label">日付（到着日）</label>
+                <input id="dateInput" class="field-control" type="date" value="2026-05-15" />
+              </div>
+              <div class="field-block">
+                <label for="baseDateInput" class="field-label">基準日（出発日）</label>
+                <input id="baseDateInput" class="field-control" type="date" value="2026-05-12" />
+              </div>
+              <div class="field-block">
+                <label for="holidayInput" class="field-label">休業日（任意）</label>
+                <input id="holidayInput" class="field-control" type="date" />
+              </div>
+              <div class="field-block">
+                <label for="workingDateInput" class="field-label">臨時営業日（任意）</label>
+                <input id="workingDateInput" class="field-control" type="date" aria-describedby="workingDateHelp" />
+                <div id="workingDateHelp" class="field-hint">同じ日を休業日にも指定すると、休業日として扱います。</div>
+              </div>
+              <fieldset class="field-block weekday-field">
+                <legend class="field-label">毎週の休業曜日</legend>
+                <div class="weekday-options">
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="0" checked /> 日</label>
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="1" /> 月</label>
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="2" /> 火</label>
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="3" /> 水</label>
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="4" /> 木</label>
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="5" /> 金</label>
+                  <label class="weekday-option"><input type="checkbox" name="weekendDays" value="6" checked /> 土</label>
                 </div>
+              </fieldset>
+              <div class="field-block">
+                <label for="timeZoneInput" class="field-label">タイムゾーン</label>
+                <select id="timeZoneInput" class="field-control">
+                  <option value="">実行環境のタイムゾーン</option>
+                  <option value="Asia/Tokyo">日本時間（Asia/Tokyo）</option>
+                </select>
+              </div>
+              <div>
+                <label for="businessDaysInput" class="field-label">営業日数</label>
+                <input id="businessDaysInput" class="field-control" type="number" step="1" value="2" />
               </div>
             </div>
 
-            <div class="col-lg-7">
-              <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold mb-3">Results</h3>
-                  <div id="demoResults" class="d-grid gap-2" aria-live="polite"></div>
-                </div>
-              </div>
+            <div class="panel">
+              <h3 class="panel-title">Results</h3>
+              <div id="demoResults" class="demo-results" aria-live="polite"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="install" class="py-5 bg-light border-top border-bottom">
+      <section id="install" class="section section-tinted">
         <div class="container">
-          <div class="row g-4 align-items-center">
-            <div class="col-lg-5">
-              <h2 class="fw-bold">Install</h2>
-              <p class="muted mb-0">npm からインストールして使えます。</p>
+          <div class="section-layout">
+            <div>
+              <h2>Install</h2>
+              <p class="muted">npm からインストールして使えます。</p>
             </div>
-            <div class="col-lg-7">
-              <div class="d-flex gap-2">
-                <div class="code-block flex-grow-1 py-3">
-                  <code>npm install tiny-ja-date</code>
-                </div>
-                <button class="btn btn-outline-secondary copy-button" data-copy="npm install tiny-ja-date">
-                  Copy
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="api" class="py-5">
-        <div class="container">
-          <div class="row justify-content-center mb-4">
-            <div class="col-lg-8 text-center">
-              <h2 class="fw-bold">API</h2>
-            </div>
-          </div>
-
-          <div class="row g-4">
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">formatJaDate</h3>
-                  <p class="muted">日本語の日付ラベルを返します。</p>
-                  <code>2026年5月12日（火）</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">formatIsoDate</h3>
-                  <p class="muted">指定した地域の暦日を <code>YYYY-MM-DD</code> で返します。</p>
-                  <code>2026-05-12</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">startOfDay</h3>
-                  <p class="muted">指定した地域での一日の始まりを返します。</p>
-                  <code>Date</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">addCalendarDays</h3>
-                  <p class="muted">土日も含めて暦日を前後に数え、移動先の日の始まりを返します。</p>
-                  <code>Date</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">addCalendarMonths</h3>
-                  <p class="muted">暦月を前後に移動し、同じ日番号がなければ月末を使います。</p>
-                  <code>Date</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">countCalendarDays</h3>
-                  <p class="muted">土日や休業日も含め、基準日から指定日までの暦日数を返します。</p>
-                  <code>number</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">formatRelativeJaDate</h3>
-                  <p class="muted">基準日から見た相対日付を日本語で返します。</p>
-                  <code>今日</code> / <code>昨日</code> / <code>明日</code> / <code>3日前</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">isWeekendJP</h3>
-                  <p class="muted">土曜日または日曜日か判定します。</p>
-                  <code>true</code> / <code>false</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">isBusinessDay</h3>
-                  <p class="muted">指定した日が営業日かを判定します。</p>
-                  <code>true</code> / <code>false</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">nextBusinessDay</h3>
-                  <p class="muted">定休日・休業日・臨時営業日の設定を使って、次の営業日を返します。</p>
-                  <code>Date</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">addBusinessDays</h3>
-                  <p class="muted">正の数で先へ、負の数で前へ進みます。0 は入力日の始まりを返します。</p>
-                  <code>Date</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">countBusinessDays</h3>
-                  <p class="muted">出発日を除き、到着日が営業日なら含めます。逆向きの営業日数は負の値になります。</p>
-                  <code>number</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">listBusinessDays</h3>
-                  <p class="muted">出発日と到着日を含む期間内の営業日を、指定した方向順に返します。</p>
-                  <code>Date[]</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">iterateBusinessDays</h3>
-                  <p class="muted">期間内の営業日を1件ずつ取り出し、必要な件数で探索を終えられます。</p>
-                  <code>Generator&lt;Date, void, unknown&gt;</code>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100 border-0 shadow-sm rounded-4">
-                <div class="card-body p-4">
-                  <h3 class="h5 fw-bold">createBusinessCalendar</h3>
-                  <p class="muted">タイムゾーンと休業日ルールを設定し、営業日計算で使い回せます。</p>
-                  <code>BusinessCalendar</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="cdn" class="py-5 bg-light border-top border-bottom">
-        <div class="container">
-          <div class="row g-4">
-            <div class="col-lg-5">
-              <h2 class="fw-bold">CDN</h2>
-              <p class="muted">
-                npm公開後は unpkg や jsDelivr から ESM として読み込めます。
-              </p>
-            </div>
-            <div class="col-lg-7">
-              <div class="mb-3">
-                <div class="d-flex gap-2">
-                  <div class="code-block flex-grow-1 py-3">
-                    <code>https://unpkg.com/tiny-ja-date@1.7.0/dist/index.js</code>
-                  </div>
-                  <button
-                    class="btn btn-outline-secondary copy-button"
-                    data-copy="https://unpkg.com/tiny-ja-date@1.7.0/dist/index.js"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
+            <div class="copy-row">
               <div class="code-block">
-<pre class="mb-0"><code>&lt;script type="module"&gt;
-  import { formatJaDate } from "https://unpkg.com/tiny-ja-date@1.7.0/dist/index.js"
+                <code>npm install tiny-ja-date</code>
+              </div>
+              <button type="button" class="button copy-button" data-copy="npm install tiny-ja-date">
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  console.log(formatJaDate(new Date(2026, 4, 12)))
+      <section id="api" class="section">
+        <div class="container">
+          <div class="section-heading">
+            <h2>API</h2>
+          </div>
+
+          <div class="card-grid">
+            <div class="panel api-panel">
+              <h3>formatJaDate</h3>
+              <p class="muted">日本語の日付ラベルを返します。</p>
+              <code>2026年5月12日（火）</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>formatIsoDate</h3>
+              <p class="muted">指定した地域の暦日を <code>YYYY-MM-DD</code> で返します。</p>
+              <code>2026-05-12</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>startOfDay</h3>
+              <p class="muted">指定した地域での一日の始まりを返します。</p>
+              <code>Date</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>addCalendarDays</h3>
+              <p class="muted">土日も含めて暦日を前後に数え、移動先の日の始まりを返します。</p>
+              <code>Date</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>addCalendarMonths</h3>
+              <p class="muted">暦月を前後に移動し、同じ日番号がなければ月末を使います。</p>
+              <code>Date</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>countCalendarDays</h3>
+              <p class="muted">土日や休業日も含め、基準日から指定日までの暦日数を返します。</p>
+              <code>number</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>formatRelativeJaDate</h3>
+              <p class="muted">基準日から見た相対日付を日本語で返します。</p>
+              <code>今日</code> / <code>昨日</code> / <code>明日</code> / <code>3日前</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>isWeekendJP</h3>
+              <p class="muted">土曜日または日曜日か判定します。</p>
+              <code>true</code> / <code>false</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>isBusinessDay</h3>
+              <p class="muted">指定した日が営業日かを判定します。</p>
+              <code>true</code> / <code>false</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>nextBusinessDay</h3>
+              <p class="muted">定休日・休業日・臨時営業日の設定を使って、次の営業日を返します。</p>
+              <code>Date</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>addBusinessDays</h3>
+              <p class="muted">正の数で先へ、負の数で前へ進みます。0 は入力日の始まりを返します。</p>
+              <code>Date</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>countBusinessDays</h3>
+              <p class="muted">出発日を除き、到着日が営業日なら含めます。逆向きの営業日数は負の値になります。</p>
+              <code>number</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>listBusinessDays</h3>
+              <p class="muted">出発日と到着日を含む期間内の営業日を、指定した方向順に返します。</p>
+              <code>Date[]</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>iterateBusinessDays</h3>
+              <p class="muted">期間内の営業日を1件ずつ取り出し、必要な件数で探索を終えられます。</p>
+              <code>Generator&lt;Date, void, unknown&gt;</code>
+            </div>
+            <div class="panel api-panel">
+              <h3>createBusinessCalendar</h3>
+              <p class="muted">タイムゾーンと休業日ルールを設定し、営業日計算で使い回せます。</p>
+              <code>BusinessCalendar</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cdn" class="section section-tinted">
+        <div class="container">
+          <div class="section-heading">
+            <h2>CDN</h2>
+            <p>どちらの CDN からでも、npm で公開されたパッケージを ES モジュールとして読み込めます。</p>
+          </div>
+          <div class="cdn-grid">
+            <div class="cdn-provider">
+              <h3>unpkg</h3>
+              <div class="code-block">
+<pre><code>&lt;script type="module"&gt;
+  import { formatJaDate } from
+    "https://unpkg.com/tiny-ja-date/dist/index.js"
+
+  console.log(formatJaDate("2026-05-12"))
 &lt;/script&gt;</code></pre>
               </div>
+              <button type="button" class="button copy-button" data-copy="https://unpkg.com/tiny-ja-date/dist/index.js">
+                Copy unpkg URL
+              </button>
+            </div>
+            <div class="cdn-provider">
+              <h3>jsDelivr</h3>
+              <div class="code-block">
+<pre><code>&lt;script type="module"&gt;
+  import { formatJaDate } from
+    "https://cdn.jsdelivr.net/npm/tiny-ja-date/dist/index.js"
+
+  console.log(formatJaDate("2026-05-12"))
+&lt;/script&gt;</code></pre>
+              </div>
+              <button type="button" class="button copy-button" data-copy="https://cdn.jsdelivr.net/npm/tiny-ja-date/dist/index.js">
+                Copy jsDelivr URL
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="py-5">
+      <section class="section">
         <div class="container">
-          <div class="row g-4 align-items-center">
-            <div class="col-lg-5">
-              <h2 class="fw-bold">Design policy</h2>
-              <p class="muted mb-0">
-                `tiny-ja-date` は日付ライブラリ全般ではなく、日本語UIでよく使う小さな関数だけを提供します。
+          <div class="section-layout">
+            <div>
+              <h2>Design policy</h2>
+              <p class="muted">
+                <code>tiny-ja-date</code> は、日本語 UI でよく使う日付表示と営業日計算の関数を提供します。
               </p>
             </div>
-            <div class="col-lg-7">
+            <div>
               <div class="code-block">
-<pre class="mb-0"><code>// Outside the scope of tiny-ja-date:
+<pre><code>// Outside the scope of tiny-ja-date:
 // - Japanese holiday data
 // - wareki formatting
 // - calendar generation
@@ -459,17 +306,86 @@ formatRelativeJaDate(
           </div>
         </div>
       </section>
+
+      <section id="related" class="section section-tinted">
+        <div class="container">
+          <div class="section-heading">
+            <h2>関連ライブラリ</h2>
+            <p>日付と金額を扱う画面や、日本向けフォーム・外部連携に使える Fusai Hanabi OSS のライブラリです。</p>
+          </div>
+          <ul class="card-grid related-grid">
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/tiny-ja-money">tiny-ja-money</a></h3>
+              <p>円単位の金額を読み取り・整形し、消費税や按分を計算できます。請求画面で支払期日と金額を扱うときに組み合わせられます。</p>
+              <a href="https://fusaihanabi.github.io/tiny-ja-money/" aria-label="tiny-ja-money のライブデモ">ライブデモ</a>
+            </li>
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/normalize-ja-input">normalize-ja-input</a></h3>
+              <p>フォーム入力の全角数字、空白、ハイフンなどの表記ゆれを整えます。</p>
+              <a href="https://fusaihanabi.github.io/normalize-ja-input/" aria-label="normalize-ja-input のライブデモ">ライブデモ</a>
+            </li>
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/ja-form-validators">ja-form-validators</a></h3>
+              <p>日本の郵便番号、電話番号、フリガナなどの入力形式を検証します。</p>
+              <a href="https://fusaihanabi.github.io/ja-form-validators/" aria-label="ja-form-validators のライブデモ">ライブデモ</a>
+            </li>
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/ja-input-mask">ja-input-mask</a></h3>
+              <p>電話番号や郵便番号などを入力中に整形し、貼り付けやカーソル操作にも対応します。</p>
+              <a href="https://fusaihanabi.github.io/ja-input-mask/" aria-label="ja-input-mask のライブデモ">ライブデモ</a>
+            </li>
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/ja-ime-utils">ja-ime-utils</a></h3>
+              <p>日本語 IME の変換状態を追跡し、確定時の Enter とフォーム送信を区別します。</p>
+              <a href="https://fusaihanabi.github.io/ja-ime-utils/" aria-label="ja-ime-utils のライブデモ">ライブデモ</a>
+            </li>
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/ja-char-check">ja-char-check</a></h3>
+              <p>保存や外部連携の前に、文字集合・文字コードの互換性やバイト数を検査します。</p>
+              <a href="https://fusaihanabi.github.io/ja-char-check/" aria-label="ja-char-check のライブデモ">ライブデモ</a>
+            </li>
+            <li class="panel">
+              <h3><a href="https://github.com/fusaihanabi/ja-zengin-utils">ja-zengin-utils</a></h3>
+              <p>全銀カナや総合振込の120バイト固定長ファイルを扱います。</p>
+              <a href="https://fusaihanabi.github.io/ja-zengin-utils/" aria-label="ja-zengin-utils のライブデモ">ライブデモ</a>
+            </li>
+          </ul>
+        </div>
+      </section>
     </main>
 
-    <footer class="py-4 border-top bg-white">
-      <div class="container d-flex flex-column flex-md-row justify-content-between gap-2">
-        <span class="muted">MIT Licensed.</span>
-        <span class="muted"><a href="https://dl.fusai-hanabi.com">dl.fusai-hanabi.com</a></span>
-        <span class="muted">Built for small Japanese date utilities.</span>
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>MIT License</span>
+        <a href="https://github.com/fusaihanabi/tiny-ja-date#readme">日本語 README</a>
+        <a href="https://github.com/fusaihanabi/tiny-ja-date/blob/main/README.en.md">English README</a>
+        <a href="https://dl.fusai-hanabi.com/">Fusai Hanabi OSS</a>
       </div>
     </footer>
 
-    <script src="https://unpkg.com/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+    <script>
+      const navToggle = document.querySelector(".nav-toggle")
+      const navLinks = document.getElementById("navLinks")
+      navToggle.hidden = false
+
+      navToggle.addEventListener("click", () => {
+        const isOpen = navToggle.getAttribute("aria-expanded") === "true"
+        navToggle.setAttribute("aria-expanded", String(!isOpen))
+      })
+
+      navLinks.addEventListener("click", event => {
+        if (event.target.closest("a")) {
+          navToggle.setAttribute("aria-expanded", "false")
+        }
+      })
+
+      navToggle.closest("nav").addEventListener("keydown", event => {
+        if (event.key === "Escape" && navToggle.getAttribute("aria-expanded") === "true") {
+          navToggle.setAttribute("aria-expanded", "false")
+          navToggle.focus()
+        }
+      })
+    </script>
     <script type="module">
       import {
         countCalendarDays,
@@ -511,11 +427,11 @@ formatRelativeJaDate(
         renderResults()
       }
 
-      function resultRow(label, value, badgeClass = "text-bg-success") {
+      function resultRow(label, value, valueClass = "value-positive") {
         return `
-          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between border rounded-3 px-3 py-2 gap-2">
+          <div class="result-row">
             <code class="result-label">${label}</code>
-            <span class="badge ${badgeClass} align-self-start align-self-md-center">${value}</span>
+            <span class="result-value ${valueClass}">${value}</span>
           </div>
         `
       }
@@ -524,25 +440,25 @@ formatRelativeJaDate(
         try {
           const value = getValue()
           if (typeof value === "boolean") {
-            return resultRow(label, String(value), value ? "text-bg-warning" : "text-bg-secondary")
+            return resultRow(label, String(value), value ? "value-attention" : "value-neutral")
           }
           return resultRow(label, value)
         } catch (error) {
           if (!(error instanceof TypeError)) throw error
-          return resultRow(label, "指定した地域に存在しない日付です。", "text-bg-warning")
+          return resultRow(label, "指定した地域に存在しない日付です。", "value-attention")
         }
       }
 
       function businessDayListRow(from, to, { calendar, dateOptions }) {
         const dates = calendar.listBusinessDays(from, to)
         if (dates.length === 0) {
-          return resultRow("listBusinessDays", "期間内に営業日がありません。", "text-bg-secondary")
+          return resultRow("listBusinessDays", "期間内に営業日がありません。", "value-neutral")
         }
 
         return `
-          <div class="border rounded-3 px-3 py-2">
+          <div class="result-list-row">
             <code class="result-label">listBusinessDays</code>
-            <ul class="result-list mt-2 mb-0 ps-4" tabindex="0" aria-label="営業日一覧">
+            <ul class="result-list" tabindex="0" aria-label="営業日一覧">
               ${dates.map((date) => `<li>${formatJaDate(date, dateOptions)}</li>`).join("")}
             </ul>
           </div>
@@ -562,17 +478,17 @@ formatRelativeJaDate(
             }
           }
           labels.push(result.toISOString())
-          return resultRow(label, labels.join(" / "), "text-bg-success text-wrap text-break")
+          return resultRow(label, labels.join(" / "), "value-positive")
         } catch (error) {
           if (!(error instanceof TypeError)) throw error
-          return resultRow(label, "該当する日付がありません。", "text-bg-warning")
+          return resultRow(label, "該当する日付がありません。", "value-attention")
         }
       }
 
       function businessDaysRow(date, { calendar, dateOptions }) {
         const amount = businessDaysInput.valueAsNumber
         if (!Number.isSafeInteger(amount)) {
-          return resultRow("addBusinessDays", "営業日数を整数で入力してください。", "text-bg-warning")
+          return resultRow("addBusinessDays", "営業日数を整数で入力してください。", "value-attention")
         }
         return businessDateRow("addBusinessDays", dateOptions, () => calendar.addBusinessDays(date, amount))
       }
@@ -598,7 +514,7 @@ formatRelativeJaDate(
           dateResultRow("formatRelativeJaDate", () => formatRelativeJaDate(date, baseDate, dateOptions)),
           resultRow("countCalendarDays", String(countCalendarDays(baseDate, date, dateOptions))),
           dateResultRow("isWeekendJP", () => isWeekendJP(date, dateOptions)),
-          resultRow("isBusinessDay", String(businessDay), businessDay ? "text-bg-success" : "text-bg-warning"),
+          resultRow("isBusinessDay", String(businessDay), businessDay ? "value-positive" : "value-attention"),
           businessDateRow("nextBusinessDay", dateOptions, () => calendar.nextBusinessDay(date), true),
           businessDaysRow(date, settings),
           resultRow("countBusinessDays", String(calendar.countBusinessDays(baseDate, date))),
